@@ -46,21 +46,6 @@ function getSwipeDirection(position: ToastPosition): SwipeDirection[] {
   return ["right", verticalDirection];
 }
 
-function upsertReplayClassName(toast: {
-  type?: string;
-  updateKey?: number;
-}): string | undefined {
-  const k = toast.updateKey ?? 0;
-  if (k <= 0) {
-    return undefined;
-  }
-  const isEven = k % 2 === 0;
-  if (toast.type === "error") {
-    return isEven ? "animate-toast-error-even" : "animate-toast-error-odd";
-  }
-  return isEven ? "animate-toast-success-even" : "animate-toast-success-odd";
-}
-
 function Toasts({
   position,
   portalProps,
@@ -135,8 +120,7 @@ function Toasts({
                 "data-expanded:data-ending-style:data-[swipe-direction=left]:transform-[translateX(calc(var(--toast-swipe-movement-x)-100%-var(--toast-inset)))_translateY(var(--toast-calc-offset-y))]",
                 "data-expanded:data-ending-style:data-[swipe-direction=right]:transform-[translateX(calc(var(--toast-swipe-movement-x)+100%+var(--toast-inset)))_translateY(var(--toast-calc-offset-y))]",
                 "data-expanded:data-ending-style:data-[swipe-direction=up]:transform-[translateY(calc(var(--toast-swipe-movement-y)-100%-var(--toast-inset)))]",
-                "data-expanded:data-ending-style:data-[swipe-direction=down]:transform-[translateY(calc(var(--toast-swipe-movement-y)+100%+var(--toast-inset)))]",
-                upsertReplayClassName(toast)
+                "data-expanded:data-ending-style:data-[swipe-direction=down]:transform-[translateY(calc(var(--toast-swipe-movement-y)+100%+var(--toast-inset)))]"
               )}
               {...toastData?.rootProps}
               data-position={position}
@@ -220,8 +204,7 @@ function AnchoredToasts({
                   "relative text-balance border bg-popover not-dark:bg-clip-padding text-popover-foreground text-xs transition-[scale,opacity] overflow-hidden data-ending-style:scale-98 data-starting-style:scale-98 data-ending-style:opacity-0 data-starting-style:opacity-0",
                   tooltipStyle
                     ? "rounded-md shadow-md/5"
-                    : "rounded-lg shadow-lg/5",
-                  upsertReplayClassName(toast)
+                    : "rounded-lg shadow-lg/5"
                 )}
                 {...toastData?.rootProps}
                 data-slot="toast-popup"

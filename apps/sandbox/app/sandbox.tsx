@@ -247,6 +247,13 @@ import {
 import { useTheme } from "next-themes";
 import * as React from "react";
 
+import {
+  normalizeHexColor,
+  parseThemeColorRgba,
+  resolveColorToHex,
+} from "./theme-color";
+import { ThemeColorField } from "./theme-color-field";
+
 interface Fruit {
   label: string;
   value: string;
@@ -265,7 +272,11 @@ interface CommandGroupData {
 
 const storageKey = "my-ui-theme-draft";
 const themeModeStorageKey = "theme";
-const colorCommitDelayMs = 180;
+const themeSpacingMinRem = 0.2;
+const themeSpacingMaxRem = 0.35;
+const themeSpacingStepRem = 0.01;
+const themeRadiusMaxRem = 2;
+const themeRadiusStepRem = 0.1;
 
 const resolvedThemeModes = ["light", "dark"] as const;
 
@@ -278,6 +289,20 @@ const themeModeLabels = {
   dark: "Dark",
   light: "Light",
 } as const;
+
+const themeFontItems = [
+  { label: "Geist", value: "geist" },
+  { label: "Inter", value: "inter" },
+  { label: "System", value: "system" },
+  { label: "Serif", value: "serif" },
+  { label: "Mono", value: "mono" },
+] as const;
+
+const themeFontLabels = Object.fromEntries(
+  themeFontItems.map((item) => [item.value, item.label])
+) as Record<(typeof themeFontItems)[number]["value"], string>;
+
+const themeFontValues = themeFontItems.map((item) => item.value);
 
 const colorTokenGroups = [
   {
@@ -320,24 +345,6 @@ const colorTokenGroups = [
       { label: "Warning foreground", value: "warning-foreground" },
     ],
   },
-  {
-    label: "Charts",
-    tokens: [
-      { label: "Chart 1", value: "chart-1" },
-      { label: "Chart 2", value: "chart-2" },
-      { label: "Chart 3", value: "chart-3" },
-      { label: "Chart 4", value: "chart-4" },
-      { label: "Chart 5", value: "chart-5" },
-    ],
-  },
-  {
-    label: "Code",
-    tokens: [
-      { label: "Code", value: "code" },
-      { label: "Code foreground", value: "code-foreground" },
-      { label: "Code highlight", value: "code-highlight" },
-    ],
-  },
 ] as const;
 
 type ResolvedThemeMode = (typeof resolvedThemeModes)[number];
@@ -349,16 +356,15 @@ type ThemeColorOverrides = Record<
 type ThemeStyle = React.CSSProperties &
   Record<`--${string}`, string | undefined>;
 type SandboxPortalProps = React.HTMLAttributes<HTMLDivElement> & {
-  "data-ui-motion"?: string;
   "data-sandbox-preview-portal": string;
   style: ThemeStyle;
 };
 
 interface ThemeDraft {
   colorOverrides: ThemeColorOverrides;
-  font: "geist" | "system" | "serif";
-  motion: "standard" | "reduced" | "none";
+  font: (typeof themeFontItems)[number]["value"];
   radius: string;
+  spacing: string;
 }
 
 const colorTokens = colorTokenGroups.flatMap((group) =>
@@ -371,19 +377,15 @@ function cssVariableName(token: ColorToken) {
 
 const legacyDocumentThemeProperties = [
   "--radius",
-  "--spacing",
   "--font-sans",
   ...colorTokens.map((token) => `--${token}`),
 ];
 const managedPreviewStyleProperties = [
   "--radius",
+  "--spacing",
   "--font-sans",
   ...colorTokens.map((token) => cssVariableName(token)),
 ] as const;
-
-const hexColorPattern = /^#[\da-f]{6}$/iu;
-const rgbColorPattern = /^rgba?\((?<channels>.*)\)$/iu;
-const srgbColorPattern = /^color\(\s*srgb\s+(?<channels>.+)\)$/iu;
 
 function createEmptyColorOverrides(): ThemeColorOverrides {
   return {
@@ -396,12 +398,60 @@ function createDefaultThemeDraft(): ThemeDraft {
   return {
     colorOverrides: createEmptyColorOverrides(),
     font: "geist",
-    motion: "standard",
     radius: "0",
+    spacing: "0.25",
   };
 }
 
 const defaultThemeDraft = createDefaultThemeDraft();
+
+function parseThemeRem(value: string) {
+  const parsed = Number.parseFloat(value);
+
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function formatThemeRem(value: number, decimals = 2) {
+  return value.toFixed(decimals);
+}
+
+function formatThemeRemLabel(value: string, decimals = 2) {
+  return `${formatThemeRem(parseThemeRem(value), decimals)}rem`;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function isLegacyPxThemeToken(value: string) {
+  if (value.includes(".") || !/^\d+$/u.test(value)) {
+    return false;
+  }
+
+  const pixels = Number.parseInt(value, 10);
+
+  return pixels >= 4;
+}
+
+function parseStoredThemeRem(
+  value: string,
+  fallback: string,
+  min: number,
+  max: number,
+  decimals: number
+) {
+  let rem = parseThemeRem(value);
+
+  if (isLegacyPxThemeToken(value)) {
+    rem /= 16;
+  }
+
+  if (Number.isNaN(rem)) {
+    return fallback;
+  }
+
+  return formatThemeRem(clamp(rem, min, max), decimals);
+}
 
 function createFallbackTokenValues(
   mode: ResolvedThemeMode
@@ -421,6 +471,14 @@ function createFallbackTokenValues(
   values["popover-foreground"] = foreground;
   values.primary = foreground;
   values["primary-foreground"] = card;
+  values.destructive = "#ef4444";
+  values["destructive-foreground"] = mode === "dark" ? "#f87171" : "#b91c1c";
+  values.info = "#3b82f6";
+  values["info-foreground"] = mode === "dark" ? "#60a5fa" : "#1d4ed8";
+  values.success = "#10b981";
+  values["success-foreground"] = mode === "dark" ? "#34d399" : "#047857";
+  values.warning = "#f59e0b";
+  values["warning-foreground"] = mode === "dark" ? "#fbbf24" : "#b45309";
 
   return values;
 }
@@ -443,8 +501,8 @@ function hasColorOverrides(overrides: ThemeColorOverrides) {
 function isDefaultThemeDraft(draft: ThemeDraft) {
   return (
     draft.font === defaultThemeDraft.font &&
-    draft.motion === defaultThemeDraft.motion &&
-    draft.radius === defaultThemeDraft.radius &&
+    parseThemeRem(draft.radius) === parseThemeRem(defaultThemeDraft.radius) &&
+    parseThemeRem(draft.spacing) === parseThemeRem(defaultThemeDraft.spacing) &&
     !hasColorOverrides(draft.colorOverrides)
   );
 }
@@ -454,17 +512,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isThemeFont(value: unknown): value is ThemeDraft["font"] {
-  return value === "geist" || value === "system" || value === "serif";
-}
-
-function isThemeMotion(value: unknown): value is ThemeDraft["motion"] {
-  return value === "standard" || value === "reduced" || value === "none";
-}
-
-function normalizeHexColor(value: unknown) {
-  return typeof value === "string" && hexColorPattern.test(value)
-    ? value.toLowerCase()
-    : undefined;
+  return (
+    typeof value === "string" &&
+    (themeFontValues as readonly string[]).includes(value)
+  );
 }
 
 function readStoredColorOverrides(value: unknown): ThemeColorOverrides {
@@ -541,166 +592,33 @@ function parseStoredThemeDraft(storedValue: string): ThemeDraft {
   const colorOverrides = readStoredColorOverrides(parsed.colorOverrides);
   applyLegacyColorOverrides(parsed, colorOverrides);
 
+  const spacing =
+    typeof parsed.spacing === "string"
+      ? parseStoredThemeRem(
+          parsed.spacing,
+          draft.spacing,
+          themeSpacingMinRem,
+          themeSpacingMaxRem,
+          2
+        )
+      : draft.spacing;
+  const radius =
+    typeof parsed.radius === "string"
+      ? parseStoredThemeRem(
+          parsed.radius,
+          draft.radius,
+          0,
+          themeRadiusMaxRem,
+          1
+        )
+      : draft.radius;
+
   return {
     colorOverrides,
     font: isThemeFont(parsed.font) ? parsed.font : draft.font,
-    motion: isThemeMotion(parsed.motion) ? parsed.motion : draft.motion,
-    radius: typeof parsed.radius === "string" ? parsed.radius : draft.radius,
+    radius,
+    spacing,
   };
-}
-
-interface RgbaColor {
-  a: number;
-  b: number;
-  g: number;
-  r: number;
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function parseAlpha(value: string | undefined) {
-  if (!value) {
-    return 1;
-  }
-
-  const trimmedValue = value.trim();
-
-  if (trimmedValue.endsWith("%")) {
-    return clamp(Number.parseFloat(trimmedValue) / 100, 0, 1);
-  }
-
-  return clamp(Number.parseFloat(trimmedValue), 0, 1);
-}
-
-function parseRgbChannel(value: string) {
-  const trimmedValue = value.trim();
-
-  if (trimmedValue.endsWith("%")) {
-    return clamp(Number.parseFloat(trimmedValue) * 2.55, 0, 255);
-  }
-
-  return clamp(Number.parseFloat(trimmedValue), 0, 255);
-}
-
-function parseSrgbChannel(value: string) {
-  const trimmedValue = value.trim();
-
-  if (trimmedValue.endsWith("%")) {
-    return clamp(Number.parseFloat(trimmedValue) * 2.55, 0, 255);
-  }
-
-  return clamp(Number.parseFloat(trimmedValue) * 255, 0, 255);
-}
-
-function splitColorChannels(value: string) {
-  const [channelValue, alphaValue] = value.split("/");
-  const normalizedChannelValue = channelValue ?? "";
-  const channels = normalizedChannelValue.includes(",")
-    ? normalizedChannelValue.split(",").map((channel) => channel.trim())
-    : normalizedChannelValue.trim().split(/\s+/u);
-
-  if (channels.length > 3 && !alphaValue) {
-    return {
-      alpha: channels[3],
-      channels: channels.slice(0, 3),
-    };
-  }
-
-  return {
-    alpha: alphaValue,
-    channels,
-  };
-}
-
-function parseCssColor(value: string): RgbaColor | null {
-  const normalizedValue = value.trim();
-
-  if (hexColorPattern.test(normalizedValue)) {
-    return {
-      a: 1,
-      b: Number.parseInt(normalizedValue.slice(5, 7), 16),
-      g: Number.parseInt(normalizedValue.slice(3, 5), 16),
-      r: Number.parseInt(normalizedValue.slice(1, 3), 16),
-    };
-  }
-
-  const rgbMatch = rgbColorPattern.exec(normalizedValue);
-
-  if (rgbMatch) {
-    const { channels: rgbChannels } = rgbMatch.groups ?? {};
-
-    if (!rgbChannels) {
-      return null;
-    }
-
-    const { alpha, channels } = splitColorChannels(rgbChannels);
-    const [red, green, blue] = channels;
-
-    if (!red || !green || !blue) {
-      return null;
-    }
-
-    return {
-      a: parseAlpha(alpha),
-      b: parseRgbChannel(blue),
-      g: parseRgbChannel(green),
-      r: parseRgbChannel(red),
-    };
-  }
-
-  const srgbMatch = srgbColorPattern.exec(normalizedValue);
-
-  if (srgbMatch) {
-    const { channels: srgbChannels } = srgbMatch.groups ?? {};
-
-    if (!srgbChannels) {
-      return null;
-    }
-
-    const { alpha, channels } = splitColorChannels(srgbChannels);
-    const [red, green, blue] = channels;
-
-    if (!red || !green || !blue) {
-      return null;
-    }
-
-    return {
-      a: parseAlpha(alpha),
-      b: parseSrgbChannel(blue),
-      g: parseSrgbChannel(green),
-      r: parseSrgbChannel(red),
-    };
-  }
-
-  return null;
-}
-
-function compositeColor(foreground: RgbaColor, background: RgbaColor) {
-  if (foreground.a >= 1) {
-    return foreground;
-  }
-
-  const inverseAlpha = 1 - foreground.a;
-
-  return {
-    a: 1,
-    b: foreground.b * foreground.a + background.b * inverseAlpha,
-    g: foreground.g * foreground.a + background.g * inverseAlpha,
-    r: foreground.r * foreground.a + background.r * inverseAlpha,
-  };
-}
-
-function colorToHex(color: RgbaColor) {
-  const toHexChannel = (channel: number) =>
-    Math.round(clamp(channel, 0, 255))
-      .toString(16)
-      .padStart(2, "0");
-
-  return `#${toHexChannel(color.r)}${toHexChannel(color.g)}${toHexChannel(
-    color.b
-  )}`;
 }
 
 function resolveTokenColor(probe: HTMLElement, token: ColorToken) {
@@ -725,15 +643,17 @@ function readResolvedTokenValues(
   document.body.append(probe);
 
   const backgroundColor =
-    parseCssColor(resolveTokenColor(probe, "background")) ??
-    parseCssColor(fallbackValues.background);
+    parseThemeColorRgba(resolveTokenColor(probe, "background")) ??
+    parseThemeColorRgba(fallbackValues.background);
   const values = { ...fallbackValues };
 
   for (const token of colorTokens) {
-    const tokenColor = parseCssColor(resolveTokenColor(probe, token));
+    const hex = backgroundColor
+      ? resolveColorToHex(resolveTokenColor(probe, token), backgroundColor)
+      : null;
 
-    if (tokenColor && backgroundColor) {
-      values[token] = colorToHex(compositeColor(tokenColor, backgroundColor));
+    if (hex) {
+      values[token] = hex;
     }
   }
 
@@ -749,24 +669,30 @@ function clearLegacyDocumentThemeStyles() {
     root.style.removeProperty(property);
   }
 
-  delete root.dataset.uiMotion;
   document.body?.style.removeProperty("--font-sans");
 }
 
-function createPreviewStyle(draft: ThemeDraft, mode: ResolvedThemeMode) {
+function createPreviewStyle(
+  draft: ThemeDraft,
+  mode: ResolvedThemeMode,
+  tokenValues: Record<ColorToken, string>
+) {
   const style: ThemeStyle = {};
   const modeColorOverrides = draft.colorOverrides[mode];
 
-  if (draft.radius !== defaultThemeDraft.radius) {
-    style["--radius"] = `${draft.radius}px`;
+  if (parseThemeRem(draft.radius) !== parseThemeRem(defaultThemeDraft.radius)) {
+    style["--radius"] = `${draft.radius}rem`;
+  }
+
+  if (
+    parseThemeRem(draft.spacing) !== parseThemeRem(defaultThemeDraft.spacing)
+  ) {
+    style["--spacing"] = `${draft.spacing}rem`;
   }
 
   for (const token of colorTokens) {
-    const color = modeColorOverrides[token];
-
-    if (color) {
-      style[cssVariableName(token)] = color;
-    }
+    style[cssVariableName(token)] =
+      modeColorOverrides[token] ?? tokenValues[token];
   }
 
   if (draft.font === "system") {
@@ -774,6 +700,13 @@ function createPreviewStyle(draft: ThemeDraft, mode: ResolvedThemeMode) {
     style.fontFamily = "var(--font-sans)";
   } else if (draft.font === "serif") {
     style["--font-sans"] = "ui-serif, Georgia, serif";
+    style.fontFamily = "var(--font-sans)";
+  } else if (draft.font === "inter") {
+    style["--font-sans"] =
+      "var(--font-inter), ui-sans-serif, system-ui, sans-serif";
+    style.fontFamily = "var(--font-sans)";
+  } else if (draft.font === "mono") {
+    style["--font-sans"] = "var(--font-mono), ui-monospace, monospace";
     style.fontFamily = "var(--font-sans)";
   }
 
@@ -830,33 +763,11 @@ function syncPreviewStyle(previewRoot: HTMLElement | null, style: ThemeStyle) {
   }
 }
 
-function syncPreviewMotion(
-  previewRoot: HTMLElement | null,
-  motion: string | undefined
-) {
-  for (const target of getPreviewStyleTargets(previewRoot)) {
-    if (motion) {
-      target.dataset.uiMotion = motion;
-    } else {
-      delete target.dataset.uiMotion;
-    }
-  }
-}
-
-function createSandboxPortalProps(
-  style: ThemeStyle,
-  motion: string | undefined
-): SandboxPortalProps {
-  const props: SandboxPortalProps = {
+function createSandboxPortalProps(style: ThemeStyle): SandboxPortalProps {
+  return {
     "data-sandbox-preview-portal": "",
     style: { ...style },
   };
-
-  if (motion) {
-    props["data-ui-motion"] = motion;
-  }
-
-  return props;
 }
 
 function isResolvedThemeMode(
@@ -874,10 +785,6 @@ function getColorValue(
   return draft.colorOverrides[mode][token] ?? tokenValues[token];
 }
 
-function getPreviewMotionValue(motion: ThemeDraft["motion"]) {
-  return motion === "standard" ? undefined : motion;
-}
-
 function useSandboxThemeDraft() {
   const { resolvedTheme, setTheme } = useTheme();
   const [draft, setDraft] = React.useState<ThemeDraft>(() =>
@@ -892,9 +799,8 @@ function useSandboxThemeDraft() {
   const isFirstDraftEffect = React.useRef(true);
   const [isMounted, setIsMounted] = React.useState(false);
   const previewRef = React.useRef<HTMLElement>(null);
-  const [previewColorOverrides, setPreviewColorOverrides] = React.useState<
-    Partial<Record<ColorToken, string>>
-  >({});
+  const liveColorPreviewRef = React.useRef(new Map<ColorToken, string>());
+  const colorPreviewEpochRef = React.useRef(0);
   const selectedTheme = isResolvedThemeMode(resolvedTheme)
     ? resolvedTheme
     : "light";
@@ -970,30 +876,20 @@ function useSandboxThemeDraft() {
     window.localStorage.setItem(storageKey, JSON.stringify(draft));
   }, [draft]);
 
-  const previewStyle = React.useMemo(() => {
-    const style = createPreviewStyle(draft, effectiveTheme);
-
-    for (const [token, color] of Object.entries(previewColorOverrides) as [
-      ColorToken,
-      string,
-    ][]) {
-      if (color) {
-        style[cssVariableName(token)] = color;
-      }
-    }
-
-    return style;
-  }, [draft, effectiveTheme, previewColorOverrides]);
-  const previewMotion = getPreviewMotionValue(draft.motion);
+  const previewStyle = React.useMemo(
+    () => createPreviewStyle(draft, effectiveTheme, tokenValues),
+    [draft, effectiveTheme, tokenValues]
+  );
+  const previewStyleRef = React.useRef(previewStyle);
+  previewStyleRef.current = previewStyle;
   const portalProps = React.useMemo(
-    () => createSandboxPortalProps(previewStyle, previewMotion),
-    [previewMotion, previewStyle]
+    () => createSandboxPortalProps(previewStyle),
+    [previewStyle]
   );
 
   React.useEffect(() => {
     syncPreviewStyle(previewRef.current, previewStyle);
-    syncPreviewMotion(previewRef.current, previewMotion);
-  }, [isThemeResolved, previewMotion, previewStyle]);
+  }, [isThemeResolved, previewStyle]);
 
   const updateDraft = React.useCallback(
     <K extends keyof Omit<ThemeDraft, "colorOverrides">>(
@@ -1007,6 +903,7 @@ function useSandboxThemeDraft() {
 
   const previewColor = React.useCallback(
     (token: ColorToken, value: string) => {
+      const previewEpoch = colorPreviewEpochRef.current;
       const nextColor = normalizeHexColor(value);
 
       if (!nextColor) {
@@ -1017,18 +914,40 @@ function useSandboxThemeDraft() {
       const overrideColor =
         nextColor === tokenValues[token] ? undefined : nextColor;
 
-      setPreviewColorOverrides((current) => {
-        if (overrideColor) {
-          return { ...current, [token]: overrideColor };
+      const applyPreview = () => {
+        if (previewEpoch !== colorPreviewEpochRef.current) {
+          return;
         }
 
-        const { [token]: _removed, ...next } = current;
-        return next;
-      });
-      setPreviewStyleProperty(previewRef.current, property, overrideColor);
+        if (overrideColor) {
+          liveColorPreviewRef.current.set(token, overrideColor);
+        } else {
+          liveColorPreviewRef.current.delete(token);
+        }
+
+        setPreviewStyleProperty(
+          previewRef.current,
+          property,
+          overrideColor ?? tokenValues[token]
+        );
+      };
+
+      applyPreview();
     },
     [tokenValues]
   );
+
+  const cancelColorPreview = React.useCallback((_token: ColorToken) => {
+    colorPreviewEpochRef.current += 1;
+    liveColorPreviewRef.current.clear();
+
+    const restorePreviewStyle = () => {
+      syncPreviewStyle(previewRef.current, previewStyleRef.current);
+    };
+
+    restorePreviewStyle();
+    requestAnimationFrame(restorePreviewStyle);
+  }, []);
 
   const commitColor = React.useCallback(
     (token: ColorToken, value: string) => {
@@ -1037,6 +956,9 @@ function useSandboxThemeDraft() {
       if (!nextColor) {
         return;
       }
+
+      liveColorPreviewRef.current.delete(token);
+      colorPreviewEpochRef.current += 1;
 
       setDraft((current) => {
         const modeOverrides = {
@@ -1056,24 +978,54 @@ function useSandboxThemeDraft() {
     [effectiveTheme, tokenValues]
   );
 
-  const reset = React.useCallback(() => {
-    window.localStorage.removeItem(storageKey);
-    setPreviewColorOverrides({});
-    setDraft(createDefaultThemeDraft());
+  const resetColorToken = React.useCallback(
+    (token: ColorToken) => {
+      liveColorPreviewRef.current.delete(token);
+
+      setDraft((current) => {
+        const { [token]: _removed, ...modeOverrides } =
+          current.colorOverrides[effectiveTheme];
+
+        return {
+          ...current,
+          colorOverrides: {
+            ...current.colorOverrides,
+            [effectiveTheme]: modeOverrides,
+          },
+        };
+      });
+
+      setPreviewStyleProperty(
+        previewRef.current,
+        cssVariableName(token),
+        tokenValues[token]
+      );
+    },
+    [effectiveTheme, tokenValues]
+  );
+
+  const resetAllColorTokens = React.useCallback(() => {
+    liveColorPreviewRef.current.clear();
+
+    setDraft((current) => ({
+      ...current,
+      colorOverrides: createEmptyColorOverrides(),
+    }));
   }, []);
 
   return {
     areTokenValuesResolved,
+    cancelColorPreview,
     commitColor,
     draft,
     effectiveTheme,
     isThemeResolved,
     portalProps,
     previewColor,
-    previewMotion,
     previewRef,
     previewStyle,
-    reset,
+    resetAllColorTokens,
+    resetColorToken,
     selectedTheme,
     setTheme,
     tokenValues,
@@ -1131,30 +1083,44 @@ function InlineScript({ html }: { html: string }) {
 }
 
 function ThemeRange({
+  inputId,
   label,
   value,
   unit,
+  valueDisplayId,
+  displayDecimals = 2,
   onChange,
   ...props
 }: {
+  inputId?: string;
   label: string;
   value: string;
   unit: string;
+  valueDisplayId?: string;
+  displayDecimals?: number;
   onChange: (value: string) => void;
-} & Omit<React.ComponentProps<"input">, "onChange" | "type" | "value">) {
-  const id = React.useId();
+} & Omit<React.ComponentProps<"input">, "onChange" | "id" | "type" | "value">) {
+  const generatedInputId = React.useId();
+  const id = inputId ?? generatedInputId;
+
   return (
     <div className="grid gap-2">
       <div className="flex items-center justify-between gap-3">
         <Label htmlFor={id}>{label}</Label>
-        <span className="text-muted-foreground text-xs tabular-nums">
-          {value}
-          {unit}
+        <span
+          className="text-muted-foreground text-xs tabular-nums"
+          id={valueDisplayId}
+          suppressHydrationWarning={valueDisplayId !== undefined}
+        >
+          {unit === "rem"
+            ? formatThemeRemLabel(value, displayDecimals)
+            : `${value}${unit}`}
         </span>
       </div>
       <input
         className="w-full accent-foreground"
         id={id}
+        suppressHydrationWarning={inputId !== undefined}
         type="range"
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -1167,108 +1133,45 @@ function ThemeRange({
 function ThemeColorSkeleton({ label }: { label: string }) {
   return (
     <div className="grid gap-2" data-theme-color={label}>
-      <Label className="items-start text-xs leading-4">{label}</Label>
-      <Skeleton className="h-9 w-full rounded-[8px]" />
+      <Label className="text-xs leading-4">{label}</Label>
+      <Skeleton className="h-10 w-full rounded-[8px] sm:h-9" />
     </div>
   );
 }
 
 const ThemeColor = React.memo(
   ({
+    defaultValue,
+    isModified,
     label,
+    onCancelPreview,
     onCommit,
     onPreview,
+    onReset,
     token,
     value,
   }: {
+    defaultValue: string;
+    isModified: boolean;
     label: string;
+    onCancelPreview: (token: ColorToken) => void;
     onCommit: (token: ColorToken, value: string) => void;
     onPreview: (token: ColorToken, value: string) => void;
+    onReset: (token: ColorToken) => void;
     token: ColorToken;
     value: string;
-  }) => {
-    const id = React.useId();
-    const commitTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
-      null
-    );
-    const swatchRef = React.useRef<HTMLSpanElement>(null);
-    const valueRef = React.useRef<HTMLSpanElement>(null);
-
-    React.useEffect(
-      () => () => {
-        if (commitTimeoutRef.current) {
-          clearTimeout(commitTimeoutRef.current);
-        }
-      },
-      []
-    );
-
-    function updateVisibleValue(nextValue: string) {
-      if (swatchRef.current) {
-        swatchRef.current.style.backgroundColor = nextValue;
-      }
-
-      if (valueRef.current) {
-        valueRef.current.textContent = nextValue;
-      }
-    }
-
-    function scheduleCommit(nextValue: string) {
-      if (commitTimeoutRef.current) {
-        clearTimeout(commitTimeoutRef.current);
-      }
-
-      commitTimeoutRef.current = setTimeout(() => {
-        onCommit(token, nextValue);
-      }, colorCommitDelayMs);
-    }
-
-    function commitImmediately(nextValue: string) {
-      if (commitTimeoutRef.current) {
-        clearTimeout(commitTimeoutRef.current);
-        commitTimeoutRef.current = null;
-      }
-
-      onCommit(token, nextValue);
-    }
-
-    return (
-      <div className="grid gap-2" data-theme-color={label}>
-        <Label className="items-start text-xs leading-4" htmlFor={id}>
-          {label}
-        </Label>
-        <label
-          className="flex h-9 cursor-pointer items-center gap-2 rounded-[8px] border border-input bg-background px-2 shadow-xs/5"
-          htmlFor={id}
-        >
-          <span
-            ref={swatchRef}
-            className="size-5 rounded-[6px] border border-border"
-            style={{ backgroundColor: value }}
-          />
-          <span
-            ref={valueRef}
-            className="truncate font-mono text-muted-foreground text-xs"
-          >
-            {value}
-          </span>
-          <input
-            className="sr-only"
-            defaultValue={value}
-            id={id}
-            type="color"
-            onBlur={(event) => commitImmediately(event.currentTarget.value)}
-            onInput={(event) => {
-              const nextValue = event.currentTarget.value;
-              updateVisibleValue(nextValue);
-              onPreview(token, nextValue);
-              scheduleCommit(nextValue);
-            }}
-          />
-        </label>
-      </div>
-    );
-  }
+  }) => (
+    <ThemeColorField
+      defaultValue={defaultValue}
+      isModified={isModified}
+      label={label}
+      value={value}
+      onCancelPreview={() => onCancelPreview(token)}
+      onCommit={(nextValue) => onCommit(token, nextValue)}
+      onPreview={(nextValue) => onPreview(token, nextValue)}
+      onReset={() => onReset(token)}
+    />
+  )
 );
 
 function ThemeEditorHeader() {
@@ -1282,22 +1185,26 @@ function ThemeEditorHeader() {
 
 function ThemeEditorControls({
   areTokenValuesResolved,
+  cancelColorPreview,
   commitColor,
   draft,
   effectiveTheme,
   previewColor,
-  reset,
+  resetAllColorTokens,
+  resetColorToken,
   selectedTheme,
   setTheme,
   tokenValues,
   updateDraft,
 }: {
   areTokenValuesResolved: boolean;
+  cancelColorPreview: (token: ColorToken) => void;
   commitColor: (token: ColorToken, value: string) => void;
   draft: ThemeDraft;
   effectiveTheme: ResolvedThemeMode;
   previewColor: (token: ColorToken, value: string) => void;
-  reset: () => void;
+  resetAllColorTokens: () => void;
+  resetColorToken: (token: ColorToken) => void;
   selectedTheme: ResolvedThemeMode;
   setTheme: (value: string) => void;
   tokenValues: Record<ColorToken, string>;
@@ -1307,11 +1214,36 @@ function ThemeEditorControls({
   ) => void;
 }) {
   const themeModeValueId = React.useId();
+  const themeFontValueId = React.useId();
+  const themeRadiusValueId = React.useId();
+  const themeRadiusInputId = React.useId();
+  const themeSpacingValueId = React.useId();
+  const themeSpacingInputId = React.useId();
+  const normalizeStoredRem = `function(v,d,min,max,decimals){var n=parseFloat(v);if(isNaN(n))return d;if(String(v).indexOf(".")===-1&&/^\\d+$/.test(String(v))&&n>=4)n=n/16;n=Math.min(max,Math.max(min,n));return n.toFixed(decimals)}`;
   const modeValueScript = `(()=>{try{var t=localStorage.getItem(${JSON.stringify(
     themeModeStorageKey
   )});var m=t==="dark"||t==="light"?t:matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";var labels=${JSON.stringify(themeModeLabels)};var el=document.getElementById(${JSON.stringify(
     themeModeValueId
   )});if(el)el.textContent=labels[m]||labels.light}catch(e){}})()`;
+  const fontValueScript = `(()=>{try{var raw=localStorage.getItem(${JSON.stringify(
+    storageKey
+  )});var font="geist";var allowed=${JSON.stringify(themeFontValues)};if(raw){var p=JSON.parse(raw);if(p&&typeof p.font==="string"&&allowed.includes(p.font))font=p.font}var labels=${JSON.stringify(themeFontLabels)};var el=document.getElementById(${JSON.stringify(
+    themeFontValueId
+  )});if(el)el.textContent=labels[font]||labels.geist}catch(e){}})()`;
+  const radiusValueScript = `(()=>{try{${normalizeStoredRem};var raw=localStorage.getItem(${JSON.stringify(
+    storageKey
+  )});var spacing="0.25";var radius="0";if(raw){var p=JSON.parse(raw);if(p&&typeof p.spacing==="string"&&p.spacing!=="")spacing=normalizeStoredRem(p.spacing,"0.25",${themeSpacingMinRem},${themeSpacingMaxRem},2);if(p&&typeof p.radius==="string"&&p.radius!=="")radius=normalizeStoredRem(p.radius,"0",0,${themeRadiusMaxRem},1)}var el=document.getElementById(${JSON.stringify(
+    themeRadiusValueId
+  )});if(el)el.textContent=radius+"rem";var input=document.getElementById(${JSON.stringify(
+    themeRadiusInputId
+  )});if(input)input.value=radius}catch(e){}})()`;
+  const spacingValueScript = `(()=>{try{${normalizeStoredRem};var raw=localStorage.getItem(${JSON.stringify(
+    storageKey
+  )});var spacing="0.25";if(raw){var p=JSON.parse(raw);if(p&&typeof p.spacing==="string"&&p.spacing!=="")spacing=normalizeStoredRem(p.spacing,"0.25",${themeSpacingMinRem},${themeSpacingMaxRem},2)}var el=document.getElementById(${JSON.stringify(
+    themeSpacingValueId
+  )});if(el)el.textContent=spacing+"rem";var input=document.getElementById(${JSON.stringify(
+    themeSpacingInputId
+  )});if(input)input.value=spacing}catch(e){}})()`;
 
   return (
     <>
@@ -1338,68 +1270,6 @@ function ThemeEditorControls({
         <InlineScript html={modeValueScript} />
       </div>
 
-      <Button onClick={reset} variant="destructive">
-        Reset tokens
-      </Button>
-
-      <div className="grid gap-4">
-        <ThemeRange
-          label="Radius"
-          max="24"
-          min="0"
-          step="1"
-          value={draft.radius}
-          unit="px"
-          onChange={(value) => updateDraft("radius", value)}
-        />
-      </div>
-
-      <div className="grid gap-5">
-        <div className="flex items-center justify-between gap-3">
-          <Label>Colors</Label>
-          <span className="text-muted-foreground text-xs">
-            {effectiveTheme === "dark" ? "Dark" : "Light"} tokens
-          </span>
-        </div>
-        {colorTokenGroups.map((group) => (
-          <div className="grid gap-2" key={group.label}>
-            <p className="font-medium text-muted-foreground text-xs">
-              {group.label}
-            </p>
-            <div aria-busy={!areTokenValuesResolved} className="grid gap-2">
-              {group.tokens.map((token) => {
-                if (!areTokenValuesResolved) {
-                  return (
-                    <ThemeColorSkeleton
-                      key={`${effectiveTheme}-${token.value}-skeleton`}
-                      label={token.label}
-                    />
-                  );
-                }
-
-                const colorValue = getColorValue(
-                  tokenValues,
-                  draft,
-                  effectiveTheme,
-                  token.value
-                );
-
-                return (
-                  <ThemeColor
-                    key={`${effectiveTheme}-${token.value}-${colorValue}`}
-                    label={token.label}
-                    token={token.value}
-                    value={colorValue}
-                    onCommit={commitColor}
-                    onPreview={previewColor}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-
       <div className="grid gap-3">
         <Label htmlFor="theme-font">Font</Label>
         <Select
@@ -1408,69 +1278,106 @@ function ThemeEditorControls({
           onValueChange={(value) =>
             updateDraft("font", value as ThemeDraft["font"])
           }
-          items={[
-            { label: "Geist", value: "geist" },
-            { label: "System", value: "system" },
-            { label: "Serif", value: "serif" },
-          ]}
+          items={themeFontItems}
         >
           <SelectTrigger id="theme-font">
-            <SelectValue />
+            <SelectValue id={themeFontValueId} />
           </SelectTrigger>
           <SelectPopup>
-            <SelectItem value="geist">Geist</SelectItem>
-            <SelectItem value="system">System</SelectItem>
-            <SelectItem value="serif">Serif</SelectItem>
+            {themeFontItems.map((item) => (
+              <SelectItem key={item.value} value={item.value}>
+                {item.label}
+              </SelectItem>
+            ))}
           </SelectPopup>
         </Select>
+        <InlineScript html={fontValueScript} />
       </div>
 
-      <div className="grid gap-3">
-        <Label htmlFor="theme-motion">Motion</Label>
-        <Select
-          aria-label="Motion"
-          value={draft.motion}
-          onValueChange={(value) =>
-            updateDraft("motion", value as ThemeDraft["motion"])
-          }
-          items={[
-            { label: "Standard", value: "standard" },
-            { label: "Reduced", value: "reduced" },
-            { label: "None", value: "none" },
-          ]}
-        >
-          <SelectTrigger id="theme-motion">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectPopup>
-            <SelectItem value="standard">Standard</SelectItem>
-            <SelectItem value="reduced">Reduced</SelectItem>
-            <SelectItem value="none">None</SelectItem>
-          </SelectPopup>
-        </Select>
+      <div className="grid gap-4">
+        <ThemeRange
+          displayDecimals={1}
+          inputId={themeRadiusInputId}
+          label="Radius"
+          max={String(themeRadiusMaxRem)}
+          min="0"
+          step={String(themeRadiusStepRem)}
+          value={draft.radius}
+          unit="rem"
+          valueDisplayId={themeRadiusValueId}
+          onChange={(value) => updateDraft("radius", value)}
+        />
+        <InlineScript html={radiusValueScript} />
+        <ThemeRange
+          inputId={themeSpacingInputId}
+          label="Spacing"
+          max={String(themeSpacingMaxRem)}
+          min={String(themeSpacingMinRem)}
+          step={String(themeSpacingStepRem)}
+          value={draft.spacing}
+          unit="rem"
+          valueDisplayId={themeSpacingValueId}
+          onChange={(value) => updateDraft("spacing", value)}
+        />
+        <InlineScript html={spacingValueScript} />
+      </div>
+
+      <Button onClick={resetAllColorTokens} variant="destructive">
+        Reset all tokens
+      </Button>
+
+      <div aria-busy={!areTokenValuesResolved} className="grid gap-4.5">
+        {colorTokenGroups.flatMap((group) =>
+          group.tokens.map((token) => {
+            if (!areTokenValuesResolved) {
+              return (
+                <ThemeColorSkeleton
+                  key={`${effectiveTheme}-${token.value}-skeleton`}
+                  label={token.label}
+                />
+              );
+            }
+
+            const colorValue = getColorValue(
+              tokenValues,
+              draft,
+              effectiveTheme,
+              token.value
+            );
+            const isModified = Boolean(
+              draft.colorOverrides[effectiveTheme][token.value]
+            );
+
+            return (
+              <ThemeColor
+                key={`${effectiveTheme}-${token.value}`}
+                defaultValue={tokenValues[token.value]}
+                isModified={isModified}
+                label={token.label}
+                token={token.value}
+                value={colorValue}
+                onCancelPreview={cancelColorPreview}
+                onCommit={commitColor}
+                onPreview={previewColor}
+                onReset={resetColorToken}
+              />
+            );
+          })
+        )}
       </div>
     </>
   );
 }
 
-function ThemeEditor({
-  areTokenValuesResolved,
-  commitColor,
-  draft,
-  effectiveTheme,
-  previewColor,
-  reset,
-  selectedTheme,
-  setTheme,
-  tokenValues,
-  updateDraft,
-}: {
+interface ThemeEditorProps {
   areTokenValuesResolved: boolean;
+  cancelColorPreview: (token: ColorToken) => void;
   commitColor: (token: ColorToken, value: string) => void;
   draft: ThemeDraft;
   effectiveTheme: ResolvedThemeMode;
   previewColor: (token: ColorToken, value: string) => void;
-  reset: () => void;
+  resetAllColorTokens: () => void;
+  resetColorToken: (token: ColorToken) => void;
   selectedTheme: ResolvedThemeMode;
   setTheme: (value: string) => void;
   tokenValues: Record<ColorToken, string>;
@@ -1478,7 +1385,9 @@ function ThemeEditor({
     key: K,
     value: ThemeDraft[K]
   ) => void;
-}) {
+}
+
+function ThemeEditorMobileBar(props: ThemeEditorProps) {
   const isWide = useMediaQuery("lg");
   const [sheetOpen, setSheetOpen] = React.useState(false);
 
@@ -1488,27 +1397,10 @@ function ThemeEditor({
     }
   }, [isWide]);
 
-  function renderControls() {
-    return (
-      <ThemeEditorControls
-        areTokenValuesResolved={areTokenValuesResolved}
-        commitColor={commitColor}
-        draft={draft}
-        effectiveTheme={effectiveTheme}
-        previewColor={previewColor}
-        reset={reset}
-        selectedTheme={selectedTheme}
-        setTheme={setTheme}
-        tokenValues={tokenValues}
-        updateDraft={updateDraft}
-      />
-    );
-  }
-
   return (
-    <>
+    <div className="sandbox-mobile-bar sticky top-0 z-40 border-border border-b bg-background/95 backdrop-blur lg:hidden">
       <Sheet onOpenChange={setSheetOpen} open={sheetOpen}>
-        <div className="sticky top-0 z-40 flex items-center justify-between gap-3 border-border border-b bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
+        <div className="flex items-center justify-between gap-3 px-4 py-3">
           <ThemeEditorHeader />
           <SheetTrigger
             render={<Button aria-label="Open theme editor" variant="outline" />}
@@ -1517,24 +1409,32 @@ function ThemeEditor({
             Theme
           </SheetTrigger>
         </div>
-        <SheetPopup className="max-w-40" side="left">
-          <SheetHeader>
-            <SheetTitle>Theme editor</SheetTitle>
+        <SheetPopup className="max-w-72" side="left">
+          <SheetHeader className="px-5 pb-3 pe-10 pt-5">
+            <SheetTitle>Theme Editor</SheetTitle>
             <SheetDescription>
-              Adjust sandbox tokens and display mode.
+              Adjust the theme of the sandbox.
             </SheetDescription>
           </SheetHeader>
-          <SheetPanel>
-            <div className="grid gap-5">{renderControls()}</div>
+          <SheetPanel className="px-5 pb-5 pt-1">
+            <div className="grid gap-5">
+              <ThemeEditorControls {...props} />
+            </div>
           </SheetPanel>
         </SheetPopup>
       </Sheet>
+    </div>
+  );
+}
 
-      <aside className="sticky top-0 hidden h-svh flex-col gap-5 overflow-auto border-border border-e bg-card/72 p-5 backdrop-blur lg:flex">
+function ThemeEditor(props: ThemeEditorProps) {
+  return (
+    <div className="sandbox-sidebar hidden lg:block">
+      <aside className="flex h-svh max-h-svh min-h-0 flex-col gap-5 overflow-x-hidden overflow-y-auto border-border border-e bg-card/72 p-5 backdrop-blur">
         <ThemeEditorHeader />
-        {renderControls()}
+        <ThemeEditorControls {...props} />
       </aside>
-    </>
+    </div>
   );
 }
 
@@ -2167,7 +2067,7 @@ function DisclosureDemo() {
         <AccordionItem value="tokens">
           <AccordionTrigger>Design tokens</AccordionTrigger>
           <AccordionPanel>
-            Radius, colors, font, and motion are live CSS variables.
+            Radius, colors, and font are live CSS variables.
           </AccordionPanel>
         </AccordionItem>
         <AccordionItem value="package">
@@ -2437,6 +2337,7 @@ function ToastDemo() {
 export function Sandbox() {
   const {
     areTokenValuesResolved,
+    cancelColorPreview,
     commitColor,
     draft,
     effectiveTheme,
@@ -2444,7 +2345,8 @@ export function Sandbox() {
     previewColor,
     previewRef,
     portalProps,
-    reset,
+    resetAllColorTokens,
+    resetColorToken,
     selectedTheme,
     setTheme,
     tokenValues,
@@ -2625,30 +2527,37 @@ export function Sandbox() {
     [areTokenValuesResolved, portalProps, previewRef]
   );
 
+  const themeEditorProps = {
+    areTokenValuesResolved,
+    cancelColorPreview,
+    commitColor,
+    draft,
+    effectiveTheme,
+    previewColor,
+    resetAllColorTokens,
+    resetColorToken,
+    selectedTheme,
+    setTheme,
+    tokenValues,
+    updateDraft,
+  };
+
   return (
     <TooltipProvider>
       <ToastProvider portalProps={portalProps} position="bottom-right">
-        <div className="sandbox-grid grid min-h-svh">
-          <ThemeEditor
-            areTokenValuesResolved={areTokenValuesResolved}
-            commitColor={commitColor}
-            draft={draft}
-            effectiveTheme={effectiveTheme}
-            previewColor={previewColor}
-            reset={reset}
-            selectedTheme={selectedTheme}
-            setTheme={setTheme}
-            tokenValues={tokenValues}
-            updateDraft={updateDraft}
-          />
-          <div className="relative min-h-0 min-w-0">
-            {isThemeResolved ? (
-              preview
-            ) : (
-              <div className="flex h-full min-h-0 items-center justify-center bg-background text-foreground">
-                <Spinner className="text-muted-foreground [&_svg]:size-6" />
-              </div>
-            )}
+        <div className="flex min-h-svh flex-col">
+          <ThemeEditorMobileBar {...themeEditorProps} />
+          <div className="sandbox-grid grid min-h-0 flex-1">
+            <ThemeEditor {...themeEditorProps} />
+            <div className="sandbox-preview relative">
+              {isThemeResolved ? (
+                preview
+              ) : (
+                <div className="flex h-full min-h-0 items-center justify-center bg-background text-foreground">
+                  <Spinner className="text-muted-foreground [&_svg]:size-6" />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </ToastProvider>

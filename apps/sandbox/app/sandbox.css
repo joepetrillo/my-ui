@@ -4,10 +4,64 @@
     grid-template-rows: minmax(0, 1fr);
   }
 
+  .sandbox-sidebar {
+    min-width: 0;
+  }
+
+  .sandbox-preview {
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  @media (min-width: 1024px) {
+    .sandbox-sidebar {
+      position: sticky;
+      top: 0;
+      align-self: start;
+      height: 100svh;
+      max-height: 100svh;
+    }
+  }
+
   @media (max-width: 1023px) {
     .sandbox-grid {
       grid-template-columns: 1fr;
-      grid-template-rows: auto minmax(0, 1fr);
     }
   }
+}
+
+/* Unlayered so these override react-colorful's injected stylesheet. */
+.theme-color-picker.react-colorful {
+  width: 100%;
+  height: 140px;
+  gap: 8px;
+}
+
+.theme-color-picker .react-colorful__saturation {
+  flex-grow: 1;
+  overflow: hidden;
+  border: none !important;
+  border-bottom: none !important;
+  border-radius: 0.5rem;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.theme-color-picker .react-colorful__interactive {
+  border-radius: inherit;
+}
+
+.theme-color-picker .react-colorful__hue {
+  flex-shrink: 0;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 9999px;
+}
+
+.theme-color-picker .react-colorful__pointer {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
 }
