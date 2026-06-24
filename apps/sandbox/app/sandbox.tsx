@@ -88,6 +88,7 @@ import {
   DrawerHeader,
   DrawerPanel,
   DrawerPopup,
+  DrawerSwipeArea,
   DrawerTitle,
   DrawerTrigger,
   Empty,
@@ -260,18 +261,6 @@ import {
 import { useTheme } from "next-themes";
 import * as React from "react";
 
-interface ThemeDraft {
-  radius: string;
-  spacing: string;
-  background: string;
-  foreground: string;
-  card: string;
-  primary: string;
-  border: string;
-  font: "geist" | "system" | "serif";
-  motion: "standard" | "reduced" | "none";
-}
-
 interface Fruit {
   label: string;
   value: string;
@@ -290,65 +279,817 @@ interface CommandGroupData {
 
 const storageKey = "my-ui-theme-draft";
 const themeModeStorageKey = "theme";
+const colorCommitDelayMs = 180;
+
+const resolvedThemeModes = ["light", "dark"] as const;
 
 const themeModeItems = [
   { label: "Light", value: "light" },
   { label: "Dark", value: "dark" },
-  { label: "System", value: "system" },
 ] as const;
 
 const themeModeLabels = {
   dark: "Dark",
   light: "Light",
-  system: "System",
 } as const;
 
-const themeColorProperties = [
-  "--background",
-  "--card",
-  "--popover",
-  "--foreground",
-  "--card-foreground",
-  "--popover-foreground",
-  "--primary",
-  "--primary-foreground",
-  "--border",
-  "--input",
-  "--ring",
+const colorTokenGroups = [
+  {
+    label: "Core",
+    tokens: [
+      { label: "Background", value: "background" },
+      { label: "Foreground", value: "foreground" },
+      { label: "Card", value: "card" },
+      { label: "Card foreground", value: "card-foreground" },
+      { label: "Popover", value: "popover" },
+      { label: "Popover foreground", value: "popover-foreground" },
+      { label: "Border", value: "border" },
+      { label: "Input", value: "input" },
+      { label: "Ring", value: "ring" },
+    ],
+  },
+  {
+    label: "Actions",
+    tokens: [
+      { label: "Primary", value: "primary" },
+      { label: "Primary foreground", value: "primary-foreground" },
+      { label: "Secondary", value: "secondary" },
+      { label: "Secondary foreground", value: "secondary-foreground" },
+      { label: "Muted", value: "muted" },
+      { label: "Muted foreground", value: "muted-foreground" },
+      { label: "Accent", value: "accent" },
+      { label: "Accent foreground", value: "accent-foreground" },
+    ],
+  },
+  {
+    label: "Status",
+    tokens: [
+      { label: "Destructive", value: "destructive" },
+      { label: "Destructive foreground", value: "destructive-foreground" },
+      { label: "Info", value: "info" },
+      { label: "Info foreground", value: "info-foreground" },
+      { label: "Success", value: "success" },
+      { label: "Success foreground", value: "success-foreground" },
+      { label: "Warning", value: "warning" },
+      { label: "Warning foreground", value: "warning-foreground" },
+    ],
+  },
+  {
+    label: "Charts",
+    tokens: [
+      { label: "Chart 1", value: "chart-1" },
+      { label: "Chart 2", value: "chart-2" },
+      { label: "Chart 3", value: "chart-3" },
+      { label: "Chart 4", value: "chart-4" },
+      { label: "Chart 5", value: "chart-5" },
+    ],
+  },
+  {
+    label: "Sidebar",
+    tokens: [
+      { label: "Sidebar", value: "sidebar" },
+      { label: "Sidebar foreground", value: "sidebar-foreground" },
+      { label: "Sidebar primary", value: "sidebar-primary" },
+      {
+        label: "Sidebar primary foreground",
+        value: "sidebar-primary-foreground",
+      },
+      { label: "Sidebar accent", value: "sidebar-accent" },
+      {
+        label: "Sidebar accent foreground",
+        value: "sidebar-accent-foreground",
+      },
+      { label: "Sidebar border", value: "sidebar-border" },
+      { label: "Sidebar ring", value: "sidebar-ring" },
+    ],
+  },
+  {
+    label: "Code",
+    tokens: [
+      { label: "Code", value: "code" },
+      { label: "Code foreground", value: "code-foreground" },
+      { label: "Code highlight", value: "code-highlight" },
+    ],
+  },
 ] as const;
 
-const defaultThemeDraft: ThemeDraft = {
-  background: "#fbfaf7",
-  border: "#d8d3c9",
-  card: "#fffefd",
-  font: "geist",
-  foreground: "#252521",
-  motion: "standard",
-  primary: "#252521",
-  radius: "0",
-  spacing: "0.27",
+type ResolvedThemeMode = (typeof resolvedThemeModes)[number];
+type ColorToken = (typeof colorTokenGroups)[number]["tokens"][number]["value"];
+type ThemeColorOverrides = Record<
+  ResolvedThemeMode,
+  Partial<Record<ColorToken, string>>
+>;
+type ThemeStyle = React.CSSProperties &
+  Record<`--${string}`, string | undefined>;
+type SandboxPortalProps = React.HTMLAttributes<HTMLDivElement> & {
+  "data-ui-motion"?: string;
+  "data-sandbox-preview-portal": string;
+  style: ThemeStyle;
 };
 
+interface ThemeDraft {
+  colorOverrides: ThemeColorOverrides;
+  font: "geist" | "system" | "serif";
+  motion: "standard" | "reduced" | "none";
+  radius: string;
+}
+
+const colorTokens = colorTokenGroups.flatMap((group) =>
+  group.tokens.map((token) => token.value)
+) as ColorToken[];
+
+function cssVariableName(token: ColorToken) {
+  return `--${token}` as const;
+}
+
+const legacyDocumentThemeProperties = [
+  "--radius",
+  "--spacing",
+  "--font-sans",
+  ...colorTokens.map((token) => `--${token}`),
+];
+const managedPreviewStyleProperties = [
+  "--radius",
+  "--font-sans",
+  ...colorTokens.map((token) => cssVariableName(token)),
+] as const;
+
+const hexColorPattern = /^#[\da-f]{6}$/iu;
+const rgbColorPattern = /^rgba?\((?<channels>.*)\)$/iu;
+const srgbColorPattern = /^color\(\s*srgb\s+(?<channels>.+)\)$/iu;
+
+function createEmptyColorOverrides(): ThemeColorOverrides {
+  return {
+    dark: {},
+    light: {},
+  };
+}
+
+function createDefaultThemeDraft(): ThemeDraft {
+  return {
+    colorOverrides: createEmptyColorOverrides(),
+    font: "geist",
+    motion: "standard",
+    radius: "0",
+  };
+}
+
+const defaultThemeDraft = createDefaultThemeDraft();
+
+function createFallbackTokenValues(
+  mode: ResolvedThemeMode
+): Record<ColorToken, string> {
+  const background = mode === "dark" ? "#171715" : "#fbfaf7";
+  const foreground = mode === "dark" ? "#f2f0ea" : "#252521";
+  const card = mode === "dark" ? "#1d1c1a" : "#fffefd";
+  const values = Object.fromEntries(
+    colorTokens.map((token) => [token, foreground])
+  ) as Record<ColorToken, string>;
+
+  values.background = background;
+  values.foreground = foreground;
+  values.card = card;
+  values["card-foreground"] = foreground;
+  values.popover = mode === "dark" ? "#20201d" : "#fffefd";
+  values["popover-foreground"] = foreground;
+  values.primary = foreground;
+  values["primary-foreground"] = card;
+
+  return values;
+}
+
+const fallbackTokenValues = {
+  dark: createFallbackTokenValues("dark"),
+  light: createFallbackTokenValues("light"),
+} satisfies Record<ResolvedThemeMode, Record<ColorToken, string>>;
+
+function hasModeColorOverrides(overrides: Partial<Record<ColorToken, string>>) {
+  return colorTokens.some((token) => Boolean(overrides[token]));
+}
+
+function hasColorOverrides(overrides: ThemeColorOverrides) {
+  return resolvedThemeModes.some((mode) =>
+    hasModeColorOverrides(overrides[mode])
+  );
+}
+
 function isDefaultThemeDraft(draft: ThemeDraft) {
-  return Object.entries(defaultThemeDraft).every(
-    ([key, value]) => draft[key as keyof ThemeDraft] === value
-  );
-}
-
-function hasCustomThemeColors(draft: ThemeDraft) {
   return (
-    draft.background !== defaultThemeDraft.background ||
-    draft.foreground !== defaultThemeDraft.foreground ||
-    draft.card !== defaultThemeDraft.card ||
-    draft.primary !== defaultThemeDraft.primary ||
-    draft.border !== defaultThemeDraft.border
+    draft.font === defaultThemeDraft.font &&
+    draft.motion === defaultThemeDraft.motion &&
+    draft.radius === defaultThemeDraft.radius &&
+    !hasColorOverrides(draft.colorOverrides)
   );
 }
 
-function isThemeMode(
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isThemeFont(value: unknown): value is ThemeDraft["font"] {
+  return value === "geist" || value === "system" || value === "serif";
+}
+
+function isThemeMotion(value: unknown): value is ThemeDraft["motion"] {
+  return value === "standard" || value === "reduced" || value === "none";
+}
+
+function normalizeHexColor(value: unknown) {
+  return typeof value === "string" && hexColorPattern.test(value)
+    ? value.toLowerCase()
+    : undefined;
+}
+
+function readStoredColorOverrides(value: unknown): ThemeColorOverrides {
+  const colorOverrides = createEmptyColorOverrides();
+
+  if (!isRecord(value)) {
+    return colorOverrides;
+  }
+
+  for (const mode of resolvedThemeModes) {
+    const modeValue = value[mode];
+
+    if (!isRecord(modeValue)) {
+      continue;
+    }
+
+    for (const token of colorTokens) {
+      const color = normalizeHexColor(modeValue[token]);
+
+      if (color) {
+        colorOverrides[mode][token] = color;
+      }
+    }
+  }
+
+  return colorOverrides;
+}
+
+function applyLegacyColorOverrides(
+  storedValue: Record<string, unknown>,
+  colorOverrides: ThemeColorOverrides
+) {
+  const legacyTokenDefaults = [
+    { defaultValue: "#fbfaf7", key: "background", token: "background" },
+    { defaultValue: "#252521", key: "foreground", token: "foreground" },
+    { defaultValue: "#fffefd", key: "card", token: "card" },
+    { defaultValue: "#252521", key: "primary", token: "primary" },
+    { defaultValue: "#d8d3c9", key: "border", token: "border" },
+  ] as const satisfies readonly {
+    defaultValue: string;
+    key: string;
+    token: ColorToken;
+  }[];
+  const legacyOverrides: Partial<Record<ColorToken, string>> = {};
+
+  for (const { defaultValue, key, token } of legacyTokenDefaults) {
+    const color = normalizeHexColor(storedValue[key]);
+
+    if (color && color !== defaultValue) {
+      legacyOverrides[token] = color;
+    }
+  }
+
+  if (!hasModeColorOverrides(legacyOverrides)) {
+    return;
+  }
+
+  for (const mode of resolvedThemeModes) {
+    colorOverrides[mode] = {
+      ...legacyOverrides,
+      ...colorOverrides[mode],
+    };
+  }
+}
+
+function parseStoredThemeDraft(storedValue: string): ThemeDraft {
+  const draft = createDefaultThemeDraft();
+  const parsed = JSON.parse(storedValue) as unknown;
+
+  if (!isRecord(parsed)) {
+    return draft;
+  }
+
+  const colorOverrides = readStoredColorOverrides(parsed.colorOverrides);
+  applyLegacyColorOverrides(parsed, colorOverrides);
+
+  return {
+    colorOverrides,
+    font: isThemeFont(parsed.font) ? parsed.font : draft.font,
+    motion: isThemeMotion(parsed.motion) ? parsed.motion : draft.motion,
+    radius: typeof parsed.radius === "string" ? parsed.radius : draft.radius,
+  };
+}
+
+interface RgbaColor {
+  a: number;
+  b: number;
+  g: number;
+  r: number;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function parseAlpha(value: string | undefined) {
+  if (!value) {
+    return 1;
+  }
+
+  const trimmedValue = value.trim();
+
+  if (trimmedValue.endsWith("%")) {
+    return clamp(Number.parseFloat(trimmedValue) / 100, 0, 1);
+  }
+
+  return clamp(Number.parseFloat(trimmedValue), 0, 1);
+}
+
+function parseRgbChannel(value: string) {
+  const trimmedValue = value.trim();
+
+  if (trimmedValue.endsWith("%")) {
+    return clamp(Number.parseFloat(trimmedValue) * 2.55, 0, 255);
+  }
+
+  return clamp(Number.parseFloat(trimmedValue), 0, 255);
+}
+
+function parseSrgbChannel(value: string) {
+  const trimmedValue = value.trim();
+
+  if (trimmedValue.endsWith("%")) {
+    return clamp(Number.parseFloat(trimmedValue) * 2.55, 0, 255);
+  }
+
+  return clamp(Number.parseFloat(trimmedValue) * 255, 0, 255);
+}
+
+function splitColorChannels(value: string) {
+  const [channelValue, alphaValue] = value.split("/");
+  const normalizedChannelValue = channelValue ?? "";
+  const channels = normalizedChannelValue.includes(",")
+    ? normalizedChannelValue.split(",").map((channel) => channel.trim())
+    : normalizedChannelValue.trim().split(/\s+/u);
+
+  if (channels.length > 3 && !alphaValue) {
+    return {
+      alpha: channels[3],
+      channels: channels.slice(0, 3),
+    };
+  }
+
+  return {
+    alpha: alphaValue,
+    channels,
+  };
+}
+
+function parseCssColor(value: string): RgbaColor | null {
+  const normalizedValue = value.trim();
+
+  if (hexColorPattern.test(normalizedValue)) {
+    return {
+      a: 1,
+      b: Number.parseInt(normalizedValue.slice(5, 7), 16),
+      g: Number.parseInt(normalizedValue.slice(3, 5), 16),
+      r: Number.parseInt(normalizedValue.slice(1, 3), 16),
+    };
+  }
+
+  const rgbMatch = rgbColorPattern.exec(normalizedValue);
+
+  if (rgbMatch) {
+    const { channels: rgbChannels } = rgbMatch.groups ?? {};
+
+    if (!rgbChannels) {
+      return null;
+    }
+
+    const { alpha, channels } = splitColorChannels(rgbChannels);
+    const [red, green, blue] = channels;
+
+    if (!red || !green || !blue) {
+      return null;
+    }
+
+    return {
+      a: parseAlpha(alpha),
+      b: parseRgbChannel(blue),
+      g: parseRgbChannel(green),
+      r: parseRgbChannel(red),
+    };
+  }
+
+  const srgbMatch = srgbColorPattern.exec(normalizedValue);
+
+  if (srgbMatch) {
+    const { channels: srgbChannels } = srgbMatch.groups ?? {};
+
+    if (!srgbChannels) {
+      return null;
+    }
+
+    const { alpha, channels } = splitColorChannels(srgbChannels);
+    const [red, green, blue] = channels;
+
+    if (!red || !green || !blue) {
+      return null;
+    }
+
+    return {
+      a: parseAlpha(alpha),
+      b: parseSrgbChannel(blue),
+      g: parseSrgbChannel(green),
+      r: parseSrgbChannel(red),
+    };
+  }
+
+  return null;
+}
+
+function compositeColor(foreground: RgbaColor, background: RgbaColor) {
+  if (foreground.a >= 1) {
+    return foreground;
+  }
+
+  const inverseAlpha = 1 - foreground.a;
+
+  return {
+    a: 1,
+    b: foreground.b * foreground.a + background.b * inverseAlpha,
+    g: foreground.g * foreground.a + background.g * inverseAlpha,
+    r: foreground.r * foreground.a + background.r * inverseAlpha,
+  };
+}
+
+function colorToHex(color: RgbaColor) {
+  const toHexChannel = (channel: number) =>
+    Math.round(clamp(channel, 0, 255))
+      .toString(16)
+      .padStart(2, "0");
+
+  return `#${toHexChannel(color.r)}${toHexChannel(color.g)}${toHexChannel(
+    color.b
+  )}`;
+}
+
+function resolveTokenColor(probe: HTMLElement, token: ColorToken) {
+  probe.style.backgroundColor = "";
+  probe.style.backgroundColor = `var(${cssVariableName(token)})`;
+
+  return window.getComputedStyle(probe).backgroundColor;
+}
+
+function readResolvedTokenValues(
+  fallbackValues: Record<ColorToken, string>
+): Record<ColorToken, string> {
+  if (!document.body) {
+    return fallbackValues;
+  }
+
+  const probe = document.createElement("div");
+  probe.style.inset = "0";
+  probe.style.pointerEvents = "none";
+  probe.style.position = "absolute";
+  probe.style.visibility = "hidden";
+  document.body.append(probe);
+
+  const backgroundColor =
+    parseCssColor(resolveTokenColor(probe, "background")) ??
+    parseCssColor(fallbackValues.background);
+  const values = { ...fallbackValues };
+
+  for (const token of colorTokens) {
+    const tokenColor = parseCssColor(resolveTokenColor(probe, token));
+
+    if (tokenColor && backgroundColor) {
+      values[token] = colorToHex(compositeColor(tokenColor, backgroundColor));
+    }
+  }
+
+  probe.remove();
+
+  return values;
+}
+
+function clearLegacyDocumentThemeStyles() {
+  const root = document.documentElement;
+
+  for (const property of legacyDocumentThemeProperties) {
+    root.style.removeProperty(property);
+  }
+
+  delete root.dataset.uiMotion;
+  document.body?.style.removeProperty("--font-sans");
+}
+
+function createPreviewStyle(draft: ThemeDraft, mode: ResolvedThemeMode) {
+  const style: ThemeStyle = {};
+  const modeColorOverrides = draft.colorOverrides[mode];
+
+  if (draft.radius !== defaultThemeDraft.radius) {
+    style["--radius"] = `${draft.radius}px`;
+  }
+
+  for (const token of colorTokens) {
+    const color = modeColorOverrides[token];
+
+    if (color) {
+      style[cssVariableName(token)] = color;
+    }
+  }
+
+  if (draft.font === "system") {
+    style["--font-sans"] = "ui-sans-serif, system-ui, sans-serif";
+    style.fontFamily = "var(--font-sans)";
+  } else if (draft.font === "serif") {
+    style["--font-sans"] = "ui-serif, Georgia, serif";
+    style.fontFamily = "var(--font-sans)";
+  }
+
+  return style;
+}
+
+function getPreviewStyleTargets(previewRoot: HTMLElement | null) {
+  if (typeof document === "undefined") {
+    return previewRoot ? [previewRoot] : [];
+  }
+
+  const targets = [
+    ...document.querySelectorAll<HTMLElement>("[data-sandbox-preview-portal]"),
+  ];
+
+  if (previewRoot) {
+    targets.unshift(previewRoot);
+  }
+
+  return targets;
+}
+
+function setPreviewStyleProperty(
+  previewRoot: HTMLElement | null,
+  property: `--${string}`,
   value: string | undefined
-): value is keyof typeof themeModeLabels {
-  return value === "dark" || value === "light" || value === "system";
+) {
+  for (const target of getPreviewStyleTargets(previewRoot)) {
+    if (value) {
+      target.style.setProperty(property, value);
+    } else {
+      target.style.removeProperty(property);
+    }
+  }
+}
+
+function syncPreviewStyle(previewRoot: HTMLElement | null, style: ThemeStyle) {
+  for (const target of getPreviewStyleTargets(previewRoot)) {
+    for (const property of managedPreviewStyleProperties) {
+      target.style.removeProperty(property);
+    }
+
+    target.style.removeProperty("font-family");
+
+    for (const [property, value] of Object.entries(style)) {
+      if (property.startsWith("--") && typeof value === "string" && value) {
+        target.style.setProperty(property, value);
+      }
+    }
+
+    if (style.fontFamily) {
+      target.style.fontFamily = String(style.fontFamily);
+    }
+  }
+}
+
+function syncPreviewMotion(
+  previewRoot: HTMLElement | null,
+  motion: string | undefined
+) {
+  for (const target of getPreviewStyleTargets(previewRoot)) {
+    if (motion) {
+      target.dataset.uiMotion = motion;
+    } else {
+      delete target.dataset.uiMotion;
+    }
+  }
+}
+
+function createSandboxPortalProps(
+  style: ThemeStyle,
+  motion: string | undefined
+): SandboxPortalProps {
+  const props: SandboxPortalProps = {
+    "data-sandbox-preview-portal": "",
+    style: { ...style },
+  };
+
+  if (motion) {
+    props["data-ui-motion"] = motion;
+  }
+
+  return props;
+}
+
+function isResolvedThemeMode(
+  value: string | undefined
+): value is ResolvedThemeMode {
+  return value === "dark" || value === "light";
+}
+
+function getColorValue(
+  tokenValues: Record<ColorToken, string>,
+  draft: ThemeDraft,
+  mode: ResolvedThemeMode,
+  token: ColorToken
+) {
+  return draft.colorOverrides[mode][token] ?? tokenValues[token];
+}
+
+function getPreviewMotionValue(motion: ThemeDraft["motion"]) {
+  return motion === "standard" ? undefined : motion;
+}
+
+function useSandboxThemeDraft() {
+  const { resolvedTheme, setTheme } = useTheme();
+  const [draft, setDraft] = React.useState<ThemeDraft>(() =>
+    createDefaultThemeDraft()
+  );
+  const [tokenValues, setTokenValues] = React.useState<
+    Record<ColorToken, string>
+  >(fallbackTokenValues.light);
+  const isFirstDraftEffect = React.useRef(true);
+  const [isMounted, setIsMounted] = React.useState(false);
+  const previewRef = React.useRef<HTMLElement>(null);
+  const previewStyleRef = React.useRef<ThemeStyle>({});
+  const portalPropsRef = React.useRef<SandboxPortalProps>({
+    "data-sandbox-preview-portal": "",
+    style: {},
+  });
+  const selectedTheme = isResolvedThemeMode(resolvedTheme)
+    ? resolvedTheme
+    : "light";
+  const effectiveTheme =
+    isMounted && isResolvedThemeMode(resolvedTheme) ? resolvedTheme : "light";
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  React.useEffect(() => {
+    clearLegacyDocumentThemeStyles();
+  }, []);
+
+  React.useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setTokenValues(
+        readResolvedTokenValues(fallbackTokenValues[effectiveTheme])
+      );
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [effectiveTheme]);
+
+  React.useEffect(() => {
+    const stored = window.localStorage.getItem(storageKey);
+
+    if (!stored) {
+      return;
+    }
+
+    try {
+      const nextDraft = parseStoredThemeDraft(stored);
+
+      if (isDefaultThemeDraft(nextDraft)) {
+        window.localStorage.removeItem(storageKey);
+        return;
+      }
+
+      setDraft(nextDraft);
+    } catch {
+      window.localStorage.removeItem(storageKey);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (isFirstDraftEffect.current) {
+      isFirstDraftEffect.current = false;
+      return;
+    }
+
+    if (isDefaultThemeDraft(draft)) {
+      window.localStorage.removeItem(storageKey);
+      return;
+    }
+
+    window.localStorage.setItem(storageKey, JSON.stringify(draft));
+  }, [draft]);
+
+  const previewStyle = React.useMemo(
+    () => createPreviewStyle(draft, effectiveTheme),
+    [draft, effectiveTheme]
+  );
+  const previewMotion = getPreviewMotionValue(draft.motion);
+
+  React.useEffect(() => {
+    const style = { ...previewStyle };
+
+    previewStyleRef.current = style;
+    portalPropsRef.current = createSandboxPortalProps(style, previewMotion);
+    syncPreviewStyle(previewRef.current, style);
+    syncPreviewMotion(previewRef.current, previewMotion);
+  }, [previewMotion, previewStyle]);
+
+  const updateDraft = React.useCallback(
+    <K extends keyof Omit<ThemeDraft, "colorOverrides">>(
+      key: K,
+      value: ThemeDraft[K]
+    ) => {
+      setDraft((current) => ({ ...current, [key]: value }));
+    },
+    []
+  );
+
+  const previewColor = React.useCallback(
+    (token: ColorToken, value: string) => {
+      const nextColor = normalizeHexColor(value);
+
+      if (!nextColor) {
+        return;
+      }
+
+      const property = cssVariableName(token);
+      const overrideColor =
+        nextColor === tokenValues[token] ? undefined : nextColor;
+      const nextStyle = {
+        ...previewStyleRef.current,
+        [property]: overrideColor,
+      };
+      previewStyleRef.current = nextStyle;
+      portalPropsRef.current = createSandboxPortalProps(
+        nextStyle,
+        previewMotion
+      );
+      setPreviewStyleProperty(previewRef.current, property, overrideColor);
+    },
+    [previewMotion, tokenValues]
+  );
+
+  const commitColor = React.useCallback(
+    (token: ColorToken, value: string) => {
+      const nextColor = normalizeHexColor(value);
+
+      if (!nextColor) {
+        return;
+      }
+
+      setDraft((current) => {
+        const modeOverrides = {
+          ...current.colorOverrides[effectiveTheme],
+          [token]: nextColor === tokenValues[token] ? undefined : nextColor,
+        };
+
+        return {
+          ...current,
+          colorOverrides: {
+            ...current.colorOverrides,
+            [effectiveTheme]: modeOverrides,
+          },
+        };
+      });
+    },
+    [effectiveTheme, tokenValues]
+  );
+
+  const reset = React.useCallback(() => {
+    window.localStorage.removeItem(storageKey);
+    setDraft(createDefaultThemeDraft());
+  }, []);
+
+  return {
+    commitColor,
+    draft,
+    effectiveTheme,
+    portalPropsRef,
+    previewColor,
+    previewMotion,
+    previewRef,
+    previewStyle,
+    reset,
+    selectedTheme,
+    setTheme,
+    tokenValues,
+    updateDraft,
+  };
+}
+
+const SandboxPortalPropsContext = React.createContext<
+  React.RefObject<SandboxPortalProps> | undefined
+>(undefined);
+
+function useSandboxPortalProps() {
+  return React.useContext(SandboxPortalPropsContext)?.current;
 }
 
 const fruitItems: Fruit[] = [
@@ -381,52 +1122,6 @@ const commandGroups: CommandGroupData[] = [
     value: "Actions",
   },
 ];
-
-function applyThemeDraft(draft: ThemeDraft) {
-  const root = document.documentElement;
-  const applyColors = hasCustomThemeColors(draft);
-  root.style.setProperty("--radius", `${draft.radius}px`);
-  root.style.setProperty("--spacing", `${draft.spacing}rem`);
-  if (applyColors) {
-    root.style.setProperty("--background", draft.background);
-    root.style.setProperty("--card", draft.card);
-    root.style.setProperty("--popover", draft.card);
-    root.style.setProperty("--foreground", draft.foreground);
-    root.style.setProperty("--card-foreground", draft.foreground);
-    root.style.setProperty("--popover-foreground", draft.foreground);
-    root.style.setProperty("--primary", draft.primary);
-    root.style.setProperty(
-      "--primary-foreground",
-      draft.primary === "#252521" ? "#fbfaf7" : draft.background
-    );
-    root.style.setProperty("--border", draft.border);
-    root.style.setProperty("--input", draft.border);
-    root.style.setProperty("--ring", draft.primary);
-  } else {
-    for (const property of themeColorProperties) {
-      root.style.removeProperty(property);
-    }
-  }
-  root.dataset.uiMotion = draft.motion;
-
-  const fontTarget = document.body;
-  if (draft.font === "system") {
-    root.style.setProperty(
-      "--font-sans",
-      "ui-sans-serif, system-ui, sans-serif"
-    );
-    fontTarget?.style.setProperty(
-      "--font-sans",
-      "ui-sans-serif, system-ui, sans-serif"
-    );
-  } else if (draft.font === "serif") {
-    root.style.setProperty("--font-sans", "ui-serif, Georgia, serif");
-    fontTarget?.style.setProperty("--font-sans", "ui-serif, Georgia, serif");
-  } else {
-    root.style.removeProperty("--font-sans");
-    fontTarget?.style.removeProperty("--font-sans");
-  }
-}
 
 function InlineScript({ html }: { html: string }) {
   return (
@@ -472,43 +1167,106 @@ function ThemeRange({
   );
 }
 
-function ThemeColor({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const id = React.useId();
-  return (
-    <div className="grid gap-2">
-      <Label className="text-xs" htmlFor={id}>
-        {label}
-      </Label>
-      <label
-        className="flex h-9 cursor-pointer items-center gap-2 border border-input bg-background px-2"
-        htmlFor={id}
+const ThemeColor = React.memo(
+  ({
+    label,
+    onCommit,
+    onPreview,
+    token,
+    value,
+  }: {
+    label: string;
+    onCommit: (token: ColorToken, value: string) => void;
+    onPreview: (token: ColorToken, value: string) => void;
+    token: ColorToken;
+    value: string;
+  }) => {
+    const id = React.useId();
+    const commitTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+      null
+    );
+    const swatchRef = React.useRef<HTMLSpanElement>(null);
+    const valueRef = React.useRef<HTMLSpanElement>(null);
+
+    React.useEffect(
+      () => () => {
+        if (commitTimeoutRef.current) {
+          clearTimeout(commitTimeoutRef.current);
+        }
+      },
+      []
+    );
+
+    function updateVisibleValue(nextValue: string) {
+      if (swatchRef.current) {
+        swatchRef.current.style.backgroundColor = nextValue;
+      }
+
+      if (valueRef.current) {
+        valueRef.current.textContent = nextValue;
+      }
+    }
+
+    function scheduleCommit(nextValue: string) {
+      if (commitTimeoutRef.current) {
+        clearTimeout(commitTimeoutRef.current);
+      }
+
+      commitTimeoutRef.current = setTimeout(() => {
+        onCommit(token, nextValue);
+      }, colorCommitDelayMs);
+    }
+
+    function commitImmediately(nextValue: string) {
+      if (commitTimeoutRef.current) {
+        clearTimeout(commitTimeoutRef.current);
+        commitTimeoutRef.current = null;
+      }
+
+      onCommit(token, nextValue);
+    }
+
+    return (
+      <div
+        className="grid grid-rows-[2rem_2.25rem] gap-2"
+        data-theme-color={label}
       >
-        <span
-          className="size-5 border border-border"
-          style={{ backgroundColor: value }}
-        />
-        <span className="truncate font-mono text-muted-foreground text-xs">
-          {value}
-        </span>
-        <input
-          className="sr-only"
-          id={id}
-          type="color"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      </label>
-    </div>
-  );
-}
+        <Label className="items-start text-xs leading-4" htmlFor={id}>
+          {label}
+        </Label>
+        <label
+          className="flex h-9 cursor-pointer items-center gap-2 rounded-[8px] border border-input bg-background px-2 shadow-xs/5"
+          htmlFor={id}
+        >
+          <span
+            ref={swatchRef}
+            className="size-5 rounded-[6px] border border-border"
+            style={{ backgroundColor: value }}
+          />
+          <span
+            ref={valueRef}
+            className="truncate font-mono text-muted-foreground text-xs"
+          >
+            {value}
+          </span>
+          <input
+            className="sr-only"
+            defaultValue={value}
+            id={id}
+            type="color"
+            onBlur={(event) => commitImmediately(event.currentTarget.value)}
+            onInput={(event) => {
+              const nextValue = event.currentTarget.value;
+              updateVisibleValue(nextValue);
+              onPreview(token, nextValue);
+              scheduleCommit(nextValue);
+            }}
+          />
+        </label>
+      </div>
+    );
+  }
+);
 
 function ThemeEditorHeader() {
   return (
@@ -520,24 +1278,35 @@ function ThemeEditorHeader() {
 }
 
 function ThemeEditorControls({
+  commitColor,
   draft,
+  effectiveTheme,
+  previewColor,
   reset,
   selectedTheme,
   setTheme,
-  update,
+  tokenValues,
+  updateDraft,
 }: {
+  commitColor: (token: ColorToken, value: string) => void;
   draft: ThemeDraft;
+  effectiveTheme: ResolvedThemeMode;
+  previewColor: (token: ColorToken, value: string) => void;
   reset: () => void;
-  selectedTheme: keyof typeof themeModeLabels;
+  selectedTheme: ResolvedThemeMode;
   setTheme: (value: string) => void;
-  update: <K extends keyof ThemeDraft>(key: K, value: ThemeDraft[K]) => void;
+  tokenValues: Record<ColorToken, string>;
+  updateDraft: <K extends keyof Omit<ThemeDraft, "colorOverrides">>(
+    key: K,
+    value: ThemeDraft[K]
+  ) => void;
 }) {
   const themeModeValueId = React.useId();
   const modeValueScript = `(()=>{try{var t=localStorage.getItem(${JSON.stringify(
     themeModeStorageKey
-  )})||"system";var labels=${JSON.stringify(themeModeLabels)};var el=document.getElementById(${JSON.stringify(
+  )});var m=t==="dark"||t==="light"?t:matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";var labels=${JSON.stringify(themeModeLabels)};var el=document.getElementById(${JSON.stringify(
     themeModeValueId
-  )});if(el)el.textContent=labels[t]||labels.system}catch(e){}})()`;
+  )});if(el)el.textContent=labels[m]||labels.light}catch(e){}})()`;
 
   return (
     <>
@@ -559,7 +1328,6 @@ function ThemeEditorControls({
           <SelectPopup>
             <SelectItem value="light">Light</SelectItem>
             <SelectItem value="dark">Dark</SelectItem>
-            <SelectItem value="system">System</SelectItem>
           </SelectPopup>
         </Select>
         <InlineScript html={modeValueScript} />
@@ -573,45 +1341,45 @@ function ThemeEditorControls({
           step="1"
           value={draft.radius}
           unit="px"
-          onChange={(value) => update("radius", value)}
-        />
-        <ThemeRange
-          label="Spacing"
-          max="0.34"
-          min="0.22"
-          step="0.01"
-          value={draft.spacing}
-          unit="rem"
-          onChange={(value) => update("spacing", value)}
+          onChange={(value) => updateDraft("radius", value)}
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <ThemeColor
-          label="Background"
-          value={draft.background}
-          onChange={(value) => update("background", value)}
-        />
-        <ThemeColor
-          label="Foreground"
-          value={draft.foreground}
-          onChange={(value) => update("foreground", value)}
-        />
-        <ThemeColor
-          label="Surface"
-          value={draft.card}
-          onChange={(value) => update("card", value)}
-        />
-        <ThemeColor
-          label="Primary"
-          value={draft.primary}
-          onChange={(value) => update("primary", value)}
-        />
-        <ThemeColor
-          label="Border"
-          value={draft.border}
-          onChange={(value) => update("border", value)}
-        />
+      <div className="grid gap-4">
+        <div className="flex items-center justify-between gap-3">
+          <Label>Colors</Label>
+          <span className="text-muted-foreground text-xs">
+            {effectiveTheme === "dark" ? "Dark" : "Light"} tokens
+          </span>
+        </div>
+        {colorTokenGroups.map((group) => (
+          <div className="grid gap-3" key={group.label}>
+            <p className="font-medium text-muted-foreground text-xs">
+              {group.label}
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {group.tokens.map((token) => {
+                const colorValue = getColorValue(
+                  tokenValues,
+                  draft,
+                  effectiveTheme,
+                  token.value
+                );
+
+                return (
+                  <ThemeColor
+                    key={`${effectiveTheme}-${token.value}-${colorValue}`}
+                    label={token.label}
+                    token={token.value}
+                    value={colorValue}
+                    onCommit={commitColor}
+                    onPreview={previewColor}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="grid gap-3">
@@ -619,7 +1387,9 @@ function ThemeEditorControls({
         <Select
           aria-label="Font"
           value={draft.font}
-          onValueChange={(value) => update("font", value as ThemeDraft["font"])}
+          onValueChange={(value) =>
+            updateDraft("font", value as ThemeDraft["font"])
+          }
           items={[
             { label: "Geist", value: "geist" },
             { label: "System", value: "system" },
@@ -643,7 +1413,7 @@ function ThemeEditorControls({
           aria-label="Motion"
           value={draft.motion}
           onValueChange={(value) =>
-            update("motion", value as ThemeDraft["motion"])
+            updateDraft("motion", value as ThemeDraft["motion"])
           }
           items={[
             { label: "Standard", value: "standard" },
@@ -669,11 +1439,30 @@ function ThemeEditorControls({
   );
 }
 
-function ThemeEditor() {
-  const { theme, setTheme } = useTheme();
-  const [draft, setDraft] = React.useState<ThemeDraft>(defaultThemeDraft);
-  const isFirstDraftEffect = React.useRef(true);
-  const selectedTheme = isThemeMode(theme) ? theme : "system";
+function ThemeEditor({
+  commitColor,
+  draft,
+  effectiveTheme,
+  previewColor,
+  reset,
+  selectedTheme,
+  setTheme,
+  tokenValues,
+  updateDraft,
+}: {
+  commitColor: (token: ColorToken, value: string) => void;
+  draft: ThemeDraft;
+  effectiveTheme: ResolvedThemeMode;
+  previewColor: (token: ColorToken, value: string) => void;
+  reset: () => void;
+  selectedTheme: ResolvedThemeMode;
+  setTheme: (value: string) => void;
+  tokenValues: Record<ColorToken, string>;
+  updateDraft: <K extends keyof Omit<ThemeDraft, "colorOverrides">>(
+    key: K,
+    value: ThemeDraft[K]
+  ) => void;
+}) {
   const isWide = useMediaQuery("lg");
   const [sheetOpen, setSheetOpen] = React.useState(false);
 
@@ -683,58 +1472,18 @@ function ThemeEditor() {
     }
   }, [isWide]);
 
-  React.useEffect(() => {
-    const stored = window.localStorage.getItem(storageKey);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as Partial<ThemeDraft>;
-        const nextDraft = { ...defaultThemeDraft, ...parsed };
-        if (isDefaultThemeDraft(nextDraft)) {
-          window.localStorage.removeItem(storageKey);
-          applyThemeDraft(defaultThemeDraft);
-          return;
-        }
-        setDraft(nextDraft);
-        applyThemeDraft(nextDraft);
-      } catch {
-        applyThemeDraft(defaultThemeDraft);
-      }
-      return;
-    }
-    applyThemeDraft(defaultThemeDraft);
-  }, []);
-
-  React.useEffect(() => {
-    if (isFirstDraftEffect.current) {
-      isFirstDraftEffect.current = false;
-      return;
-    }
-    if (isDefaultThemeDraft(draft)) {
-      window.localStorage.removeItem(storageKey);
-      applyThemeDraft(draft);
-      return;
-    }
-    window.localStorage.setItem(storageKey, JSON.stringify(draft));
-    applyThemeDraft(draft);
-  }, [draft]);
-
-  function update<K extends keyof ThemeDraft>(key: K, value: ThemeDraft[K]) {
-    setDraft((current) => ({ ...current, [key]: value }));
-  }
-
-  function reset() {
-    window.localStorage.removeItem(storageKey);
-    setDraft(defaultThemeDraft);
-  }
-
   function renderControls() {
     return (
       <ThemeEditorControls
+        commitColor={commitColor}
         draft={draft}
+        effectiveTheme={effectiveTheme}
+        previewColor={previewColor}
         reset={reset}
         selectedTheme={selectedTheme}
         setTheme={setTheme}
-        update={update}
+        tokenValues={tokenValues}
+        updateDraft={updateDraft}
       />
     );
   }
@@ -912,12 +1661,14 @@ function SelectionDemo() {
 }
 
 function SelectDemo() {
+  const portalProps = useSandboxPortalProps();
+
   return (
     <Select defaultValue="next" items={frameworkItems} aria-label="Framework">
       <SelectTrigger className="max-w-xs">
         <SelectValue />
       </SelectTrigger>
-      <SelectPopup>
+      <SelectPopup portalProps={portalProps}>
         {frameworkItems.map((item) => (
           <SelectItem key={item.value} value={item.value}>
             {item.label}
@@ -929,6 +1680,8 @@ function SelectDemo() {
 }
 
 function AutocompleteDemo() {
+  const portalProps = useSandboxPortalProps();
+
   return (
     <Autocomplete items={fruitItems}>
       <AutocompleteInput
@@ -937,7 +1690,7 @@ function AutocompleteDemo() {
         showClear
         showTrigger
       />
-      <AutocompletePopup>
+      <AutocompletePopup portalProps={portalProps}>
         <AutocompleteEmpty>No tokens found.</AutocompleteEmpty>
         <AutocompleteList>
           {(item: Fruit) => (
@@ -952,10 +1705,12 @@ function AutocompleteDemo() {
 }
 
 function ComboboxDemo() {
+  const portalProps = useSandboxPortalProps();
+
   return (
     <Combobox items={fruitItems}>
       <ComboboxInput aria-label="Select tone" placeholder="Select tone..." />
-      <ComboboxPopup>
+      <ComboboxPopup portalProps={portalProps}>
         <ComboboxEmpty>No tones found.</ComboboxEmpty>
         <ComboboxList>
           {(item: Fruit) => (
@@ -971,13 +1726,15 @@ function ComboboxDemo() {
 
 function CommandDemo() {
   const [open, setOpen] = React.useState(false);
+  const portalProps = useSandboxPortalProps();
+
   return (
     <CommandDialog onOpenChange={setOpen} open={open}>
       <CommandDialogTrigger render={<Button variant="outline" />}>
         Open command
         <Kbd>J</Kbd>
       </CommandDialogTrigger>
-      <CommandDialogPopup>
+      <CommandDialogPopup portalProps={portalProps}>
         <Command items={commandGroups}>
           <CommandInput placeholder="Search..." />
           <CommandPanel>
@@ -1014,13 +1771,15 @@ function CommandDemo() {
 }
 
 function OverlayDemo() {
+  const portalProps = useSandboxPortalProps();
+
   return (
     <div className="flex flex-wrap gap-2">
       <Dialog>
         <DialogTrigger render={<Button variant="outline" />}>
           Dialog
         </DialogTrigger>
-        <DialogPopup className="sm:max-w-sm">
+        <DialogPopup className="sm:max-w-sm" portalProps={portalProps}>
           <DialogHeader>
             <DialogTitle>Edit profile</DialogTitle>
             <DialogDescription>
@@ -1046,7 +1805,7 @@ function OverlayDemo() {
         <AlertDialogTrigger render={<Button variant="outline" />}>
           Alert Dialog
         </AlertDialogTrigger>
-        <AlertDialogPopup>
+        <AlertDialogPopup portalProps={portalProps}>
           <AlertDialogHeader>
             <AlertDialogTitle>Archive project?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1066,7 +1825,7 @@ function OverlayDemo() {
 
       <Sheet>
         <SheetTrigger render={<Button variant="outline" />}>Sheet</SheetTrigger>
-        <SheetPopup side="right">
+        <SheetPopup portalProps={portalProps} side="right">
           <SheetHeader>
             <SheetTitle>Project settings</SheetTitle>
             <SheetDescription>Review workspace controls.</SheetDescription>
@@ -1084,7 +1843,8 @@ function OverlayDemo() {
         <DrawerTrigger render={<Button variant="outline" />}>
           Drawer
         </DrawerTrigger>
-        <DrawerPopup>
+        <DrawerSwipeArea />
+        <DrawerPopup portalProps={portalProps} showBar>
           <DrawerHeader>
             <DrawerTitle>Mobile panel</DrawerTitle>
             <DrawerDescription>Drawer built on Base UI.</DrawerDescription>
@@ -1104,13 +1864,15 @@ function OverlayDemo() {
 }
 
 function FloatingDemo() {
+  const portalProps = useSandboxPortalProps();
+
   return (
     <div className="flex flex-wrap gap-2">
       <Popover>
         <PopoverTrigger render={<Button variant="outline" />}>
           Popover
         </PopoverTrigger>
-        <PopoverPopup className="max-w-64">
+        <PopoverPopup className="max-w-64 gap-3" portalProps={portalProps}>
           <PopoverTitle>Token details</PopoverTitle>
           <PopoverDescription>
             Popovers inherit the active token set.
@@ -1125,14 +1887,16 @@ function FloatingDemo() {
         <TooltipTrigger render={<Button variant="outline" />}>
           Tooltip
         </TooltipTrigger>
-        <TooltipPopup>Neutral, sharp, tokenized.</TooltipPopup>
+        <TooltipPopup portalProps={portalProps}>
+          Neutral, sharp, tokenized.
+        </TooltipPopup>
       </Tooltip>
 
       <PreviewCard>
         <PreviewCardTrigger className="inline-flex h-9 items-center border border-input px-3 text-sm underline-offset-4 hover:underline">
           Preview card
         </PreviewCardTrigger>
-        <PreviewCardPopup className="max-w-72">
+        <PreviewCardPopup className="max-w-72" portalProps={portalProps}>
           <div className="grid gap-2">
             <div className="flex items-center gap-2">
               <Avatar>
@@ -1156,11 +1920,13 @@ function FloatingDemo() {
 }
 
 function MenuDemo() {
+  const portalProps = useSandboxPortalProps();
+
   return (
     <div className="flex flex-wrap gap-2">
       <Menu>
         <MenuTrigger render={<Button variant="outline" />}>Menu</MenuTrigger>
-        <MenuPopup>
+        <MenuPopup portalProps={portalProps}>
           <MenuGroup>
             <MenuGroupLabel>Playback</MenuGroupLabel>
             <MenuItem>
@@ -1177,7 +1943,7 @@ function MenuDemo() {
           <MenuCheckboxItem>Shuffle</MenuCheckboxItem>
           <MenuSub>
             <MenuSubTrigger>More</MenuSubTrigger>
-            <MenuSubPopup>
+            <MenuSubPopup portalProps={portalProps}>
               <MenuItem>Duplicate</MenuItem>
               <MenuItem variant="destructive">
                 <TrashIcon />
@@ -1197,7 +1963,7 @@ function MenuDemo() {
         <ContextMenuTrigger className="flex h-9 min-w-44 items-center justify-center border border-dashed text-muted-foreground text-sm">
           Context menu target
         </ContextMenuTrigger>
-        <ContextMenuPopup>
+        <ContextMenuPopup portalProps={portalProps}>
           <ContextMenuItem>Back</ContextMenuItem>
           <ContextMenuItem>Forward</ContextMenuItem>
           <ContextMenuSeparator />
@@ -1209,11 +1975,14 @@ function MenuDemo() {
 }
 
 function DatePickerDemo() {
+  const portalProps = useSandboxPortalProps();
   const [date, setDate] = React.useState<Date | undefined>(
     new Date(2026, 5, 24)
   );
+  const [open, setOpen] = React.useState(false);
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         render={
           <Button className="w-72 justify-start text-left" variant="outline" />
@@ -1222,8 +1991,22 @@ function DatePickerDemo() {
         <CalendarIcon />
         {date ? format(date, "PPP") : "Pick a date"}
       </PopoverTrigger>
-      <PopoverPopup align="start" className="w-auto p-0">
-        <Calendar mode="single" selected={date} onSelect={setDate} />
+      <PopoverPopup
+        align="start"
+        className="w-auto p-0"
+        portalProps={portalProps}
+      >
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={(nextDate) => {
+            setDate(nextDate);
+
+            if (nextDate) {
+              setOpen(false);
+            }
+          }}
+        />
       </PopoverPopup>
     </Popover>
   );
@@ -1317,7 +2100,7 @@ function DisclosureDemo() {
         <AccordionItem value="tokens">
           <AccordionTrigger>Design tokens</AccordionTrigger>
           <AccordionPanel>
-            Radius, spacing, colors, font, and motion are live CSS variables.
+            Radius, colors, font, and motion are live CSS variables.
           </AccordionPanel>
         </AccordionItem>
         <AccordionItem value="package">
@@ -1332,8 +2115,10 @@ function DisclosureDemo() {
         <CollapsibleTrigger render={<Button variant="outline" />}>
           {open ? "Hide" : "Show"} release notes
         </CollapsibleTrigger>
-        <CollapsiblePanel className="mt-3 border border-border p-3 text-muted-foreground text-sm">
-          The sandbox persists token changes to localStorage only.
+        <CollapsiblePanel className="mt-3">
+          <div className="border border-border p-3 text-muted-foreground text-sm">
+            The sandbox persists token changes to localStorage only.
+          </div>
         </CollapsiblePanel>
       </Collapsible>
     </div>
@@ -1486,8 +2271,8 @@ function ActionDemo() {
 
 function SidebarDemo() {
   return (
-    <div className="overflow-hidden border border-border">
-      <SidebarProvider className="!min-h-[22rem]">
+    <div className="h-[22rem] overflow-hidden border border-border">
+      <SidebarProvider className="h-full !min-h-0">
         <Sidebar
           className="border-sidebar-border border-e"
           collapsible="none"
@@ -1535,7 +2320,7 @@ function SidebarDemo() {
             </SidebarMenu>
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset className="!min-h-[22rem]">
+        <SidebarInset className="h-full min-h-0">
           <div className="flex items-center gap-2 border-border border-b p-3">
             <span className="text-muted-foreground text-sm">
               App shell preview
@@ -1608,189 +2393,225 @@ function ToastDemo() {
 }
 
 export function Sandbox() {
+  const {
+    commitColor,
+    draft,
+    effectiveTheme,
+    previewColor,
+    previewRef,
+    portalPropsRef,
+    reset,
+    selectedTheme,
+    setTheme,
+    tokenValues,
+    updateDraft,
+  } = useSandboxThemeDraft();
+  const preview = React.useMemo(
+    () => (
+      <SandboxPortalPropsContext.Provider value={portalPropsRef}>
+        <main
+          ref={previewRef}
+          className="min-w-0 bg-background text-foreground"
+        >
+          <ShellHeader />
+          <div className="mx-auto max-w-6xl px-6">
+            <Section title="Actions">
+              <ComponentBlock name="Button">
+                <ButtonDemo />
+              </ComponentBlock>
+              <ComponentBlock name="Toggle / Toggle Group / Toolbar">
+                <ActionDemo />
+              </ComponentBlock>
+            </Section>
+
+            <Section title="Inputs">
+              <ComponentBlock name="Input">
+                <Input className="max-w-sm" placeholder="Project name" />
+              </ComponentBlock>
+              <ComponentBlock name="Textarea">
+                <Textarea
+                  className="max-w-sm"
+                  defaultValue="Textarea content"
+                />
+              </ComponentBlock>
+              <ComponentBlock name="Input Group">
+                <InputGroup className="max-w-sm">
+                  <InputGroupAddon>
+                    <SearchIcon />
+                  </InputGroupAddon>
+                  <InputGroupInput placeholder="Search" />
+                  <InputGroupAddon align="inline-end">
+                    <InputGroupText>Cmd K</InputGroupText>
+                  </InputGroupAddon>
+                </InputGroup>
+              </ComponentBlock>
+              <ComponentBlock name="Field / Form / Label">
+                <FormDemo />
+              </ComponentBlock>
+              <ComponentBlock name="Fieldset">
+                <Fieldset className="grid max-w-md gap-3 border border-border p-4">
+                  <FieldsetLegend>Notifications</FieldsetLegend>
+                  <SelectionDemo />
+                </Fieldset>
+              </ComponentBlock>
+              <ComponentBlock name="Select">
+                <SelectDemo />
+              </ComponentBlock>
+              <ComponentBlock name="Autocomplete">
+                <AutocompleteDemo />
+              </ComponentBlock>
+              <ComponentBlock name="Combobox">
+                <ComboboxDemo />
+              </ComponentBlock>
+              <ComponentBlock name="Number Field / Slider / OTP Field">
+                <NumericDemo />
+              </ComponentBlock>
+            </Section>
+
+            <Section title="Overlays">
+              <ComponentBlock name="Dialog / Alert Dialog / Sheet / Drawer">
+                <OverlayDemo />
+              </ComponentBlock>
+              <ComponentBlock name="Popover / Tooltip / Preview Card">
+                <FloatingDemo />
+              </ComponentBlock>
+              <ComponentBlock name="Menu / Context Menu">
+                <MenuDemo />
+              </ComponentBlock>
+              <ComponentBlock name="Command">
+                <CommandDemo />
+              </ComponentBlock>
+            </Section>
+
+            <Section title="Navigation and Layout">
+              <ComponentBlock name="Tabs">
+                <Tabs defaultValue="preview">
+                  <TabsList>
+                    <TabsTab value="preview">Preview</TabsTab>
+                    <TabsTab value="code">Code</TabsTab>
+                  </TabsList>
+                  <TabsPanel value="preview">
+                    <p className="pt-3 text-muted-foreground text-sm">
+                      Component output.
+                    </p>
+                  </TabsPanel>
+                  <TabsPanel value="code">
+                    <p className="pt-3 font-mono text-muted-foreground text-sm">
+                      npm install @my-ui/ui
+                    </p>
+                  </TabsPanel>
+                </Tabs>
+              </ComponentBlock>
+              <ComponentBlock name="Accordion / Collapsible">
+                <DisclosureDemo />
+              </ComponentBlock>
+              <ComponentBlock name="Breadcrumb / Pagination">
+                <NavigationDemo />
+              </ComponentBlock>
+              <ComponentBlock name="Sidebar">
+                <SidebarDemo />
+              </ComponentBlock>
+              <ComponentBlock name="Scroll Area / Separator">
+                <div className="max-w-md border border-border">
+                  <ScrollArea className="h-32">
+                    <div className="grid gap-2 p-3">
+                      {Array.from({ length: 8 }, (_, index) => (
+                        <React.Fragment key={index}>
+                          <p className="text-sm">Scrollable row {index + 1}</p>
+                          {index < 7 ? <Separator /> : null}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </ComponentBlock>
+            </Section>
+
+            <Section title="Content">
+              <ComponentBlock name="Card / Frame">
+                <ContentDemo />
+              </ComponentBlock>
+              <ComponentBlock name="Avatar / Badge / Kbd / Group">
+                <UtilityDemo />
+              </ComponentBlock>
+              <ComponentBlock name="Alert">
+                <Alert variant="info">
+                  <ClipboardIcon />
+                  <AlertTitle>Neutral alert</AlertTitle>
+                  <AlertDescription>
+                    Semantic variants use neutral tokens by default.
+                  </AlertDescription>
+                  <AlertAction>
+                    <Button size="sm" variant="outline">
+                      Review
+                    </Button>
+                  </AlertAction>
+                </Alert>
+              </ComponentBlock>
+              <ComponentBlock name="Empty">
+                <Empty className="border border-border">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <FileTextIcon />
+                    </EmptyMedia>
+                    <EmptyTitle>No files</EmptyTitle>
+                    <EmptyDescription>
+                      Upload a document to start the workflow.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                  <EmptyContent>
+                    <Button variant="outline">
+                      <PlusIcon />
+                      Add file
+                    </Button>
+                  </EmptyContent>
+                </Empty>
+              </ComponentBlock>
+              <ComponentBlock name="Table">
+                <DataDemo />
+              </ComponentBlock>
+            </Section>
+
+            <Section title="Dates and Feedback">
+              <ComponentBlock name="Calendar">
+                <Calendar className="border border-border p-3" />
+              </ComponentBlock>
+              <ComponentBlock name="Date Picker">
+                <DatePickerDemo />
+              </ComponentBlock>
+              <ComponentBlock name="Progress / Meter / Spinner / Skeleton">
+                <StatusDemo />
+              </ComponentBlock>
+              <ComponentBlock name="Toast">
+                <ToastDemo />
+              </ComponentBlock>
+            </Section>
+          </div>
+        </main>
+      </SandboxPortalPropsContext.Provider>
+    ),
+    [portalPropsRef, previewRef]
+  );
+
   return (
     <TooltipProvider>
-      <ToastProvider position="bottom-right">
+      <ToastProvider
+        portalProps={portalPropsRef.current}
+        position="bottom-right"
+      >
         <div className="sandbox-grid grid min-h-svh">
-          <ThemeEditor />
-          <main className="min-w-0">
-            <ShellHeader />
-            <div className="mx-auto max-w-6xl px-6">
-              <Section title="Actions">
-                <ComponentBlock name="Button">
-                  <ButtonDemo />
-                </ComponentBlock>
-                <ComponentBlock name="Toggle / Toggle Group / Toolbar">
-                  <ActionDemo />
-                </ComponentBlock>
-              </Section>
-
-              <Section title="Inputs">
-                <ComponentBlock name="Input">
-                  <Input className="max-w-sm" placeholder="Project name" />
-                </ComponentBlock>
-                <ComponentBlock name="Textarea">
-                  <Textarea
-                    className="max-w-sm"
-                    defaultValue="Textarea content"
-                  />
-                </ComponentBlock>
-                <ComponentBlock name="Input Group">
-                  <InputGroup className="max-w-sm">
-                    <InputGroupAddon>
-                      <SearchIcon />
-                    </InputGroupAddon>
-                    <InputGroupInput placeholder="Search" />
-                    <InputGroupAddon align="inline-end">
-                      <InputGroupText>Cmd K</InputGroupText>
-                    </InputGroupAddon>
-                  </InputGroup>
-                </ComponentBlock>
-                <ComponentBlock name="Field / Form / Label">
-                  <FormDemo />
-                </ComponentBlock>
-                <ComponentBlock name="Fieldset">
-                  <Fieldset className="grid max-w-md gap-3 border border-border p-4">
-                    <FieldsetLegend>Notifications</FieldsetLegend>
-                    <SelectionDemo />
-                  </Fieldset>
-                </ComponentBlock>
-                <ComponentBlock name="Select">
-                  <SelectDemo />
-                </ComponentBlock>
-                <ComponentBlock name="Autocomplete">
-                  <AutocompleteDemo />
-                </ComponentBlock>
-                <ComponentBlock name="Combobox">
-                  <ComboboxDemo />
-                </ComponentBlock>
-                <ComponentBlock name="Number Field / Slider / OTP Field">
-                  <NumericDemo />
-                </ComponentBlock>
-              </Section>
-
-              <Section title="Overlays">
-                <ComponentBlock name="Dialog / Alert Dialog / Sheet / Drawer">
-                  <OverlayDemo />
-                </ComponentBlock>
-                <ComponentBlock name="Popover / Tooltip / Preview Card">
-                  <FloatingDemo />
-                </ComponentBlock>
-                <ComponentBlock name="Menu / Context Menu">
-                  <MenuDemo />
-                </ComponentBlock>
-                <ComponentBlock name="Command">
-                  <CommandDemo />
-                </ComponentBlock>
-              </Section>
-
-              <Section title="Navigation and Layout">
-                <ComponentBlock name="Tabs">
-                  <Tabs defaultValue="preview">
-                    <TabsList>
-                      <TabsTab value="preview">Preview</TabsTab>
-                      <TabsTab value="code">Code</TabsTab>
-                    </TabsList>
-                    <TabsPanel value="preview">
-                      <p className="pt-3 text-muted-foreground text-sm">
-                        Component output.
-                      </p>
-                    </TabsPanel>
-                    <TabsPanel value="code">
-                      <p className="pt-3 font-mono text-muted-foreground text-sm">
-                        npm install @my-ui/ui
-                      </p>
-                    </TabsPanel>
-                  </Tabs>
-                </ComponentBlock>
-                <ComponentBlock name="Accordion / Collapsible">
-                  <DisclosureDemo />
-                </ComponentBlock>
-                <ComponentBlock name="Breadcrumb / Pagination">
-                  <NavigationDemo />
-                </ComponentBlock>
-                <ComponentBlock name="Sidebar">
-                  <SidebarDemo />
-                </ComponentBlock>
-                <ComponentBlock name="Scroll Area / Separator">
-                  <div className="max-w-md border border-border">
-                    <ScrollArea className="h-32">
-                      <div className="grid gap-2 p-3">
-                        {Array.from({ length: 8 }, (_, index) => (
-                          <React.Fragment key={index}>
-                            <p className="text-sm">
-                              Scrollable row {index + 1}
-                            </p>
-                            {index < 7 ? <Separator /> : null}
-                          </React.Fragment>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                </ComponentBlock>
-              </Section>
-
-              <Section title="Content">
-                <ComponentBlock name="Card / Frame">
-                  <ContentDemo />
-                </ComponentBlock>
-                <ComponentBlock name="Avatar / Badge / Kbd / Group">
-                  <UtilityDemo />
-                </ComponentBlock>
-                <ComponentBlock name="Alert">
-                  <Alert variant="info">
-                    <ClipboardIcon />
-                    <AlertTitle>Neutral alert</AlertTitle>
-                    <AlertDescription>
-                      Semantic variants use neutral tokens by default.
-                    </AlertDescription>
-                    <AlertAction>
-                      <Button size="sm" variant="outline">
-                        Review
-                      </Button>
-                    </AlertAction>
-                  </Alert>
-                </ComponentBlock>
-                <ComponentBlock name="Empty">
-                  <Empty className="border border-border">
-                    <EmptyHeader>
-                      <EmptyMedia variant="icon">
-                        <FileTextIcon />
-                      </EmptyMedia>
-                      <EmptyTitle>No files</EmptyTitle>
-                      <EmptyDescription>
-                        Upload a document to start the workflow.
-                      </EmptyDescription>
-                    </EmptyHeader>
-                    <EmptyContent>
-                      <Button variant="outline">
-                        <PlusIcon />
-                        Add file
-                      </Button>
-                    </EmptyContent>
-                  </Empty>
-                </ComponentBlock>
-                <ComponentBlock name="Table">
-                  <DataDemo />
-                </ComponentBlock>
-              </Section>
-
-              <Section title="Dates and Feedback">
-                <ComponentBlock name="Calendar">
-                  <Calendar className="border border-border p-3" />
-                </ComponentBlock>
-                <ComponentBlock name="Date Picker">
-                  <DatePickerDemo />
-                </ComponentBlock>
-                <ComponentBlock name="Progress / Meter / Spinner / Skeleton">
-                  <StatusDemo />
-                </ComponentBlock>
-                <ComponentBlock name="Toast">
-                  <ToastDemo />
-                </ComponentBlock>
-              </Section>
-            </div>
-          </main>
+          <ThemeEditor
+            commitColor={commitColor}
+            draft={draft}
+            effectiveTheme={effectiveTheme}
+            previewColor={previewColor}
+            reset={reset}
+            selectedTheme={selectedTheme}
+            setTheme={setTheme}
+            tokenValues={tokenValues}
+            updateDraft={updateDraft}
+          />
+          {preview}
         </div>
       </ToastProvider>
     </TooltipProvider>
