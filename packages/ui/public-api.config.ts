@@ -50,7 +50,6 @@ export const publicModules = [
   { source: "./components/select", subpath: "./select" },
   { source: "./components/separator", subpath: "./separator" },
   { source: "./components/sheet", subpath: "./sheet" },
-  { source: "./components/sidebar", subpath: "./sidebar" },
   { source: "./components/skeleton", subpath: "./skeleton" },
   { source: "./components/slider", subpath: "./slider" },
   { source: "./components/spinner", subpath: "./spinner" },

@@ -410,34 +410,6 @@ export {
   SheetOverlay,
   SheetContent,
 } from "./components/sheet";
-export {
-  SidebarContext,
-  useSidebar,
-  SidebarProvider,
-  Sidebar,
-  SidebarTrigger,
-  SidebarRail,
-  SidebarInset,
-  SidebarInput,
-  SidebarHeader,
-  SidebarFooter,
-  SidebarSeparator,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupAction,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarMenuAction,
-  SidebarMenuBadge,
-  SidebarMenuSkeleton,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
-} from "./components/sidebar";
-export type { SidebarContextProps } from "./components/sidebar";
 export { Skeleton } from "./components/skeleton";
 export { Slider, SliderValue, SliderPrimitive } from "./components/slider";
 export { Spinner } from "./components/spinner";

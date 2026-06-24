@@ -6,7 +6,6 @@ import {
   AccordionPanel,
   AccordionTrigger,
   Alert,
-  AlertAction,
   AlertDescription,
   AlertTitle,
   AlertDialog,
@@ -188,18 +187,6 @@ import {
   SheetPopup,
   SheetTitle,
   SheetTrigger,
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
   Skeleton,
   Slider,
   SliderValue,
@@ -239,24 +226,23 @@ import {
   BoldIcon,
   CalendarIcon,
   CheckIcon,
+  CircleAlertIcon,
+  CircleCheckIcon,
   ClipboardIcon,
   CopyIcon,
   FileTextIcon,
-  HomeIcon,
-  InboxIcon,
+  InfoIcon,
   ItalicIcon,
-  LayersIcon,
   PauseIcon,
   PlayIcon,
   PlusIcon,
   SaveIcon,
   SearchIcon,
-  SettingsIcon,
   SlidersHorizontalIcon,
   StarIcon,
   TrashIcon,
+  TriangleAlertIcon,
   UnderlineIcon,
-  UserIcon,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import * as React from "react";
@@ -342,25 +328,6 @@ const colorTokenGroups = [
       { label: "Chart 3", value: "chart-3" },
       { label: "Chart 4", value: "chart-4" },
       { label: "Chart 5", value: "chart-5" },
-    ],
-  },
-  {
-    label: "Sidebar",
-    tokens: [
-      { label: "Sidebar", value: "sidebar" },
-      { label: "Sidebar foreground", value: "sidebar-foreground" },
-      { label: "Sidebar primary", value: "sidebar-primary" },
-      {
-        label: "Sidebar primary foreground",
-        value: "sidebar-primary-foreground",
-      },
-      { label: "Sidebar accent", value: "sidebar-accent" },
-      {
-        label: "Sidebar accent foreground",
-        value: "sidebar-accent-foreground",
-      },
-      { label: "Sidebar border", value: "sidebar-border" },
-      { label: "Sidebar ring", value: "sidebar-ring" },
     ],
   },
   {
@@ -919,14 +886,15 @@ function useSandboxThemeDraft() {
   const [tokenValues, setTokenValues] = React.useState<
     Record<ColorToken, string>
   >(fallbackTokenValues.light);
+  const [areTokenValuesResolved, setAreTokenValuesResolved] =
+    React.useState(false);
+  const [isThemeResolved, setIsThemeResolved] = React.useState(false);
   const isFirstDraftEffect = React.useRef(true);
   const [isMounted, setIsMounted] = React.useState(false);
   const previewRef = React.useRef<HTMLElement>(null);
-  const previewStyleRef = React.useRef<ThemeStyle>({});
-  const portalPropsRef = React.useRef<SandboxPortalProps>({
-    "data-sandbox-preview-portal": "",
-    style: {},
-  });
+  const [previewColorOverrides, setPreviewColorOverrides] = React.useState<
+    Partial<Record<ColorToken, string>>
+  >({});
   const selectedTheme = isResolvedThemeMode(resolvedTheme)
     ? resolvedTheme
     : "light";
@@ -938,14 +906,30 @@ function useSandboxThemeDraft() {
   }, []);
 
   React.useEffect(() => {
+    if (
+      isThemeResolved ||
+      !isMounted ||
+      !isResolvedThemeMode(resolvedTheme) ||
+      !areTokenValuesResolved
+    ) {
+      return;
+    }
+
+    setIsThemeResolved(true);
+  }, [areTokenValuesResolved, isMounted, isThemeResolved, resolvedTheme]);
+
+  React.useEffect(() => {
     clearLegacyDocumentThemeStyles();
   }, []);
 
   React.useEffect(() => {
+    setAreTokenValuesResolved(false);
+
     const frame = window.requestAnimationFrame(() => {
       setTokenValues(
         readResolvedTokenValues(fallbackTokenValues[effectiveTheme])
       );
+      setAreTokenValuesResolved(true);
     });
 
     return () => window.cancelAnimationFrame(frame);
@@ -986,20 +970,30 @@ function useSandboxThemeDraft() {
     window.localStorage.setItem(storageKey, JSON.stringify(draft));
   }, [draft]);
 
-  const previewStyle = React.useMemo(
-    () => createPreviewStyle(draft, effectiveTheme),
-    [draft, effectiveTheme]
-  );
+  const previewStyle = React.useMemo(() => {
+    const style = createPreviewStyle(draft, effectiveTheme);
+
+    for (const [token, color] of Object.entries(previewColorOverrides) as [
+      ColorToken,
+      string,
+    ][]) {
+      if (color) {
+        style[cssVariableName(token)] = color;
+      }
+    }
+
+    return style;
+  }, [draft, effectiveTheme, previewColorOverrides]);
   const previewMotion = getPreviewMotionValue(draft.motion);
+  const portalProps = React.useMemo(
+    () => createSandboxPortalProps(previewStyle, previewMotion),
+    [previewMotion, previewStyle]
+  );
 
   React.useEffect(() => {
-    const style = { ...previewStyle };
-
-    previewStyleRef.current = style;
-    portalPropsRef.current = createSandboxPortalProps(style, previewMotion);
-    syncPreviewStyle(previewRef.current, style);
+    syncPreviewStyle(previewRef.current, previewStyle);
     syncPreviewMotion(previewRef.current, previewMotion);
-  }, [previewMotion, previewStyle]);
+  }, [isThemeResolved, previewMotion, previewStyle]);
 
   const updateDraft = React.useCallback(
     <K extends keyof Omit<ThemeDraft, "colorOverrides">>(
@@ -1022,18 +1016,18 @@ function useSandboxThemeDraft() {
       const property = cssVariableName(token);
       const overrideColor =
         nextColor === tokenValues[token] ? undefined : nextColor;
-      const nextStyle = {
-        ...previewStyleRef.current,
-        [property]: overrideColor,
-      };
-      previewStyleRef.current = nextStyle;
-      portalPropsRef.current = createSandboxPortalProps(
-        nextStyle,
-        previewMotion
-      );
+
+      setPreviewColorOverrides((current) => {
+        if (overrideColor) {
+          return { ...current, [token]: overrideColor };
+        }
+
+        const { [token]: _removed, ...next } = current;
+        return next;
+      });
       setPreviewStyleProperty(previewRef.current, property, overrideColor);
     },
-    [previewMotion, tokenValues]
+    [tokenValues]
   );
 
   const commitColor = React.useCallback(
@@ -1064,14 +1058,17 @@ function useSandboxThemeDraft() {
 
   const reset = React.useCallback(() => {
     window.localStorage.removeItem(storageKey);
+    setPreviewColorOverrides({});
     setDraft(createDefaultThemeDraft());
   }, []);
 
   return {
+    areTokenValuesResolved,
     commitColor,
     draft,
     effectiveTheme,
-    portalPropsRef,
+    isThemeResolved,
+    portalProps,
     previewColor,
     previewMotion,
     previewRef,
@@ -1085,11 +1082,11 @@ function useSandboxThemeDraft() {
 }
 
 const SandboxPortalPropsContext = React.createContext<
-  React.RefObject<SandboxPortalProps> | undefined
+  SandboxPortalProps | undefined
 >(undefined);
 
 function useSandboxPortalProps() {
-  return React.useContext(SandboxPortalPropsContext)?.current;
+  return React.useContext(SandboxPortalPropsContext);
 }
 
 const fruitItems: Fruit[] = [
@@ -1167,6 +1164,15 @@ function ThemeRange({
   );
 }
 
+function ThemeColorSkeleton({ label }: { label: string }) {
+  return (
+    <div className="grid gap-2" data-theme-color={label}>
+      <Label className="items-start text-xs leading-4">{label}</Label>
+      <Skeleton className="h-9 w-full rounded-[8px]" />
+    </div>
+  );
+}
+
 const ThemeColor = React.memo(
   ({
     label,
@@ -1227,10 +1233,7 @@ const ThemeColor = React.memo(
     }
 
     return (
-      <div
-        className="grid grid-rows-[2rem_2.25rem] gap-2"
-        data-theme-color={label}
-      >
+      <div className="grid gap-2" data-theme-color={label}>
         <Label className="items-start text-xs leading-4" htmlFor={id}>
           {label}
         </Label>
@@ -1278,6 +1281,7 @@ function ThemeEditorHeader() {
 }
 
 function ThemeEditorControls({
+  areTokenValuesResolved,
   commitColor,
   draft,
   effectiveTheme,
@@ -1288,6 +1292,7 @@ function ThemeEditorControls({
   tokenValues,
   updateDraft,
 }: {
+  areTokenValuesResolved: boolean;
   commitColor: (token: ColorToken, value: string) => void;
   draft: ThemeDraft;
   effectiveTheme: ResolvedThemeMode;
@@ -1333,6 +1338,10 @@ function ThemeEditorControls({
         <InlineScript html={modeValueScript} />
       </div>
 
+      <Button onClick={reset} variant="destructive">
+        Reset tokens
+      </Button>
+
       <div className="grid gap-4">
         <ThemeRange
           label="Radius"
@@ -1345,7 +1354,7 @@ function ThemeEditorControls({
         />
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-5">
         <div className="flex items-center justify-between gap-3">
           <Label>Colors</Label>
           <span className="text-muted-foreground text-xs">
@@ -1353,12 +1362,21 @@ function ThemeEditorControls({
           </span>
         </div>
         {colorTokenGroups.map((group) => (
-          <div className="grid gap-3" key={group.label}>
+          <div className="grid gap-2" key={group.label}>
             <p className="font-medium text-muted-foreground text-xs">
               {group.label}
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            <div aria-busy={!areTokenValuesResolved} className="grid gap-2">
               {group.tokens.map((token) => {
+                if (!areTokenValuesResolved) {
+                  return (
+                    <ThemeColorSkeleton
+                      key={`${effectiveTheme}-${token.value}-skeleton`}
+                      label={token.label}
+                    />
+                  );
+                }
+
                 const colorValue = getColorValue(
                   tokenValues,
                   draft,
@@ -1431,15 +1449,12 @@ function ThemeEditorControls({
           </SelectPopup>
         </Select>
       </div>
-
-      <Button onClick={reset} variant="outline">
-        Reset tokens
-      </Button>
     </>
   );
 }
 
 function ThemeEditor({
+  areTokenValuesResolved,
   commitColor,
   draft,
   effectiveTheme,
@@ -1450,6 +1465,7 @@ function ThemeEditor({
   tokenValues,
   updateDraft,
 }: {
+  areTokenValuesResolved: boolean;
   commitColor: (token: ColorToken, value: string) => void;
   draft: ThemeDraft;
   effectiveTheme: ResolvedThemeMode;
@@ -1475,6 +1491,7 @@ function ThemeEditor({
   function renderControls() {
     return (
       <ThemeEditorControls
+        areTokenValuesResolved={areTokenValuesResolved}
         commitColor={commitColor}
         draft={draft}
         effectiveTheme={effectiveTheme}
@@ -1500,7 +1517,7 @@ function ThemeEditor({
             Theme
           </SheetTrigger>
         </div>
-        <SheetPopup className="max-w-80" side="left">
+        <SheetPopup className="max-w-40" side="left">
           <SheetHeader>
             <SheetTitle>Theme editor</SheetTitle>
             <SheetDescription>
@@ -1536,6 +1553,78 @@ function Section({
   );
 }
 
+function ThemeColorSwatch({
+  label,
+  portalProps,
+  token,
+}: {
+  label: string;
+  portalProps?: SandboxPortalProps;
+  token: ColorToken;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        delay={0}
+        render={
+          <span
+            aria-label={label}
+            className="inline-block size-10 shrink-0 rounded-sm border border-black"
+            role="img"
+            style={{ backgroundColor: `var(${cssVariableName(token)})` }}
+          />
+        }
+      />
+      <TooltipPopup portalProps={portalProps}>{label}</TooltipPopup>
+    </Tooltip>
+  );
+}
+
+function ThemeColorPalette({
+  areTokenValuesResolved,
+}: {
+  areTokenValuesResolved: boolean;
+}) {
+  const portalProps = useSandboxPortalProps();
+
+  return (
+    <Section title="Colors">
+      <TooltipProvider closeDelay={0} delay={0}>
+        <div className="grid gap-5 py-5">
+          {colorTokenGroups.map((group) => (
+            <div className="grid gap-2" key={group.label}>
+              <p className="font-mono text-muted-foreground text-xs uppercase tracking-normal">
+                {group.label}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {group.tokens.map((token) => {
+                  if (!areTokenValuesResolved) {
+                    return (
+                      <Skeleton
+                        className="size-10 rounded-sm"
+                        key={token.value}
+                      />
+                    );
+                  }
+
+                  return (
+                    <ThemeColorSwatch
+                      key={token.value}
+                      label={token.label}
+                      portalProps={portalProps}
+                      token={token.value}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </TooltipProvider>
+    </Section>
+  );
+}
+
 function ComponentBlock({
   name,
   children,
@@ -1550,28 +1639,6 @@ function ComponentBlock({
       </div>
       <div className="min-w-0">{children}</div>
     </div>
-  );
-}
-
-function ShellHeader() {
-  return (
-    <header className="flex items-center justify-between border-border border-b px-6 py-4">
-      <div className="flex items-center gap-3">
-        <div className="flex size-8 items-center justify-center border border-border bg-card">
-          <LayersIcon className="size-4" />
-        </div>
-        <div>
-          <p className="font-medium">Component sandbox</p>
-          <p className="text-muted-foreground text-sm">
-            Base UI primitives, Tailwind tokens, npm package exports
-          </p>
-        </div>
-      </div>
-      <div className="hidden items-center gap-2 sm:flex">
-        <Badge variant="secondary">Tailwind v4</Badge>
-        <Badge variant="outline">Base UI</Badge>
-      </div>
-    </header>
   );
 }
 
@@ -2156,6 +2223,48 @@ function DataDemo() {
   );
 }
 
+function AlertDemo() {
+  return (
+    <div className="grid max-w-lg gap-4">
+      <Alert>
+        <ClipboardIcon />
+        <AlertTitle>Default</AlertTitle>
+        <AlertDescription>
+          Neutral styling with muted icon color.
+        </AlertDescription>
+      </Alert>
+      <Alert variant="info">
+        <InfoIcon />
+        <AlertTitle>Info</AlertTitle>
+        <AlertDescription>
+          Informational message using info tokens.
+        </AlertDescription>
+      </Alert>
+      <Alert variant="success">
+        <CircleCheckIcon />
+        <AlertTitle>Success</AlertTitle>
+        <AlertDescription>
+          Confirmation that an action completed successfully.
+        </AlertDescription>
+      </Alert>
+      <Alert variant="warning">
+        <TriangleAlertIcon />
+        <AlertTitle>Warning</AlertTitle>
+        <AlertDescription>
+          Caution about a situation that needs attention.
+        </AlertDescription>
+      </Alert>
+      <Alert variant="error">
+        <CircleAlertIcon />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>
+          Something went wrong and may need correction.
+        </AlertDescription>
+      </Alert>
+    </div>
+  );
+}
+
 function StatusDemo() {
   return (
     <div className="grid max-w-lg gap-4">
@@ -2269,73 +2378,6 @@ function ActionDemo() {
   );
 }
 
-function SidebarDemo() {
-  return (
-    <div className="h-[22rem] overflow-hidden border border-border">
-      <SidebarProvider className="h-full !min-h-0">
-        <Sidebar
-          className="border-sidebar-border border-e"
-          collapsible="none"
-          variant="sidebar"
-        >
-          <SidebarHeader>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton isActive>
-                  <HomeIcon />
-                  <span>Overview</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel>Workspace</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton>
-                      <InboxIcon />
-                      <span>Inbox</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton>
-                      <SettingsIcon />
-                      <span>Settings</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
-          <SidebarFooter>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton>
-                  <UserIcon />
-                  <span>Account</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarFooter>
-        </Sidebar>
-        <SidebarInset className="h-full min-h-0">
-          <div className="flex items-center gap-2 border-border border-b p-3">
-            <span className="text-muted-foreground text-sm">
-              App shell preview
-            </span>
-          </div>
-          <div className="grid gap-3 p-4">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-24 w-full" />
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
-    </div>
-  );
-}
-
 function UtilityDemo() {
   const isWide = useMediaQuery("lg");
   const { copyToClipboard, isCopied } = useCopyToClipboard();
@@ -2394,12 +2436,14 @@ function ToastDemo() {
 
 export function Sandbox() {
   const {
+    areTokenValuesResolved,
     commitColor,
     draft,
     effectiveTheme,
+    isThemeResolved,
     previewColor,
     previewRef,
-    portalPropsRef,
+    portalProps,
     reset,
     selectedTheme,
     setTheme,
@@ -2408,13 +2452,15 @@ export function Sandbox() {
   } = useSandboxThemeDraft();
   const preview = React.useMemo(
     () => (
-      <SandboxPortalPropsContext.Provider value={portalPropsRef}>
+      <SandboxPortalPropsContext.Provider value={portalProps}>
         <main
           ref={previewRef}
           className="min-w-0 bg-background text-foreground"
         >
-          <ShellHeader />
           <div className="mx-auto max-w-6xl px-6">
+            <ThemeColorPalette
+              areTokenValuesResolved={areTokenValuesResolved}
+            />
             <Section title="Actions">
               <ComponentBlock name="Button">
                 <ButtonDemo />
@@ -2508,9 +2554,6 @@ export function Sandbox() {
               <ComponentBlock name="Breadcrumb / Pagination">
                 <NavigationDemo />
               </ComponentBlock>
-              <ComponentBlock name="Sidebar">
-                <SidebarDemo />
-              </ComponentBlock>
               <ComponentBlock name="Scroll Area / Separator">
                 <div className="max-w-md border border-border">
                   <ScrollArea className="h-32">
@@ -2535,18 +2578,7 @@ export function Sandbox() {
                 <UtilityDemo />
               </ComponentBlock>
               <ComponentBlock name="Alert">
-                <Alert variant="info">
-                  <ClipboardIcon />
-                  <AlertTitle>Neutral alert</AlertTitle>
-                  <AlertDescription>
-                    Semantic variants use neutral tokens by default.
-                  </AlertDescription>
-                  <AlertAction>
-                    <Button size="sm" variant="outline">
-                      Review
-                    </Button>
-                  </AlertAction>
-                </Alert>
+                <AlertDemo />
               </ComponentBlock>
               <ComponentBlock name="Empty">
                 <Empty className="border border-border">
@@ -2590,17 +2622,15 @@ export function Sandbox() {
         </main>
       </SandboxPortalPropsContext.Provider>
     ),
-    [portalPropsRef, previewRef]
+    [areTokenValuesResolved, portalProps, previewRef]
   );
 
   return (
     <TooltipProvider>
-      <ToastProvider
-        portalProps={portalPropsRef.current}
-        position="bottom-right"
-      >
+      <ToastProvider portalProps={portalProps} position="bottom-right">
         <div className="sandbox-grid grid min-h-svh">
           <ThemeEditor
+            areTokenValuesResolved={areTokenValuesResolved}
             commitColor={commitColor}
             draft={draft}
             effectiveTheme={effectiveTheme}
@@ -2611,7 +2641,15 @@ export function Sandbox() {
             tokenValues={tokenValues}
             updateDraft={updateDraft}
           />
-          {preview}
+          <div className="relative min-h-0 min-w-0">
+            {isThemeResolved ? (
+              preview
+            ) : (
+              <div className="flex h-full min-h-0 items-center justify-center bg-background text-foreground">
+                <Spinner className="text-muted-foreground [&_svg]:size-6" />
+              </div>
+            )}
+          </div>
         </div>
       </ToastProvider>
     </TooltipProvider>

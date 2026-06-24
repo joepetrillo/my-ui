@@ -196,10 +196,6 @@
       "import": "./dist/components/sheet.js",
       "types": "./dist/components/sheet.d.ts"
     },
-    "./sidebar": {
-      "import": "./dist/components/sidebar.js",
-      "types": "./dist/components/sidebar.d.ts"
-    },
     "./skeleton": {
       "import": "./dist/components/skeleton.js",
       "types": "./dist/components/skeleton.d.ts"
