@@ -1,0 +1,34 @@
+{
+  // Shared strict defaults from the monorepo root.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Next config and tooling may include `.js` files; base config disallows them.
+    "allowJs": true,
+    // Resolve `paths` relative to the app root for `@/` imports.
+    "baseUrl": ".",
+    // Reuse `.tsbuildinfo` between runs for faster local and CI typecheck.
+    "incremental": true,
+    // Leave JSX syntax for Next/SWC — overrides base `react-jsx`.
+    "jsx": "preserve",
+    // Next compiles; `tsc` only validates types.
+    "noEmit": true,
+    // Match Next.js `@/` alias used in app imports.
+    "paths": {
+      "@/*": ["./*"]
+    },
+    // Enable Next route, layout, and image type checking.
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    // App needs Node (server) plus React DOM globals.
+    "types": ["node", "react", "react-dom"],
+    // Explicit null safety on top of base `strict`.
+    "strictNullChecks": true
+  },
+  // Next env types, app sources, and generated route typings.
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  // Installed packages are not part of app typecheck scope.
+  "exclude": ["node_modules"]
+}

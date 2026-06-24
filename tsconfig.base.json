@@ -1,0 +1,46 @@
+{
+  "compilerOptions": {
+    // Reject .js sources so the monorepo stays fully typed.
+    "allowJs": false,
+    // Permit default imports from CJS packages (e.g. `import fs from "fs"`).
+    "allowSyntheticDefaultImports": true,
+    // Emit .d.ts for @my-ui/ui so apps and consumers get public API types.
+    "declaration": true,
+    // Map declarations to source so "go to definition" works across package boundaries.
+    "declarationMap": true,
+    // Normalize CJS/ESM interop; pairs with allowSyntheticDefaultImports.
+    "esModuleInterop": true,
+    // Catch import path casing mismatches before they break on Linux CI.
+    "forceConsistentCasingInFileNames": true,
+    // Require each file to type-check alone; needed for tsup, Next, and other transpilers.
+    "isolatedModules": true,
+    // React 17+ JSX transform — no `import React` required in components.
+    "jsx": "react-jsx",
+    // Browser + modern JS APIs available to UI code and the sandbox app.
+    "lib": ["DOM", "DOM.Iterable", "ES2024"],
+    // Preserve `import`/`export` syntax for bundlers to tree-shake and code-split.
+    "module": "ESNext",
+    // Treat every file as a module; avoids accidental global scope and implicit scripts.
+    "moduleDetection": "force",
+    // Resolve imports the way Vite, tsup, and Next do (package.json exports, etc.).
+    "moduleResolution": "Bundler",
+    // Base config only type-checks; each workspace opts into its own emit settings.
+    "noEmit": true,
+    // Flag switch cases that fall through without `break` or `return`.
+    "noFallthroughCasesInSwitch": true,
+    // Require `override` when subclassing — catches mistaken method signatures.
+    "noImplicitOverride": true,
+    // `arr[i]` and `obj[key]` are `T | undefined` to force explicit bounds checks.
+    "noUncheckedIndexedAccess": true,
+    // Allow `import pkg from "./package.json"` with typed JSON modules.
+    "resolveJsonModule": true,
+    // Skip deep-checking third-party .d.ts files for faster typecheck in CI.
+    "skipLibCheck": true,
+    // Enable the full strict family (null checks, implicit any, etc.).
+    "strict": true,
+    // Downlevel/assume syntax through ES2022 for modern browsers and Node.
+    "target": "ES2022",
+    // Enforce `import type` for type-only imports so emit stays side-effect free.
+    "verbatimModuleSyntax": true
+  }
+}

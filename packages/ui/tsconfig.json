@@ -1,0 +1,26 @@
+{
+  // Shared strict defaults from the monorepo root.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Resolve `paths` relative to this package, not the repo root.
+    "baseUrl": ".",
+    // Align with tsup `--dts` so published types match what tsc expects.
+    "declaration": true,
+    // When emitting, produce JS + declarations (tsup handles real builds).
+    "emitDeclarationOnly": false,
+    // `tsc` only type-checks here; tsup writes `dist/`.
+    "noEmit": true,
+    // Mirror package exports for in-repo imports like `@my-ui/ui/components/button`.
+    "paths": {
+      "@my-ui/ui/*": ["./src/*"]
+    },
+    // Browser library — load React globals only, not Node ambient types.
+    "types": ["react"],
+    // Explicit null safety on top of base `strict` (documents intent for this package).
+    "strictNullChecks": true
+  },
+  // Type-check library source only.
+  "include": ["src"],
+  // Skip build output and installed deps.
+  "exclude": ["dist", "node_modules"]
+}

@@ -1,0 +1,31 @@
+{
+  "name": "my-ui-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "type": "module",
+  "scripts": {
+    "build": "npm run build:ui && npm run build:sandbox",
+    "build:sandbox": "npm run build -w @my-ui/sandbox",
+    "build:ui": "npm run build -w @my-ui/ui",
+    "check": "ultracite check",
+    "dev": "npm run build:ui && npm run dev -w @my-ui/sandbox",
+    "format": "oxfmt . --write",
+    "format:check": "oxfmt . --check",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint . --fix",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "fix": "ultracite fix"
+  },
+  "devDependencies": {
+    "oxfmt": "^0.56.0",
+    "oxlint": "^1.71.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "ultracite": "^7.8.3"
+  }
+}

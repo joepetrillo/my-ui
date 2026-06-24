@@ -1,0 +1,21 @@
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+}
+
+@layer utilities {
+  .sandbox-grid {
+    grid-template-columns: minmax(17rem, 20rem) minmax(0, 1fr);
+  }
+
+  @media (max-width: 1023px) {
+    .sandbox-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+}
