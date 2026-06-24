@@ -1006,12 +1006,24 @@ function useSandboxThemeDraft() {
 
   const resetAllColorTokens = React.useCallback(() => {
     liveColorPreviewRef.current.clear();
+    colorPreviewEpochRef.current += 1;
 
-    setDraft((current) => ({
-      ...current,
-      colorOverrides: createEmptyColorOverrides(),
-    }));
-  }, []);
+    const nextDraft = createDefaultThemeDraft();
+    const nextPreviewStyle = createPreviewStyle(
+      nextDraft,
+      effectiveTheme,
+      tokenValues
+    );
+
+    setDraft(nextDraft);
+
+    const restorePreviewStyle = () => {
+      syncPreviewStyle(previewRef.current, nextPreviewStyle);
+    };
+
+    restorePreviewStyle();
+    requestAnimationFrame(restorePreviewStyle);
+  }, [effectiveTheme, tokenValues]);
 
   return {
     areTokenValuesResolved,
