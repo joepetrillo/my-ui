@@ -4,41 +4,6 @@ import { Progress as ProgressPrimitive } from "@base-ui/react/progress";
 import { cn } from "@my-ui/ui/lib/utils";
 import type React from "react";
 
-export function Progress({
-  className,
-  children,
-  ...props
-}: ProgressPrimitive.Root.Props): React.ReactElement {
-  return (
-    <ProgressPrimitive.Root
-      className={cn("flex w-full flex-col gap-2", className)}
-      data-slot="progress"
-      {...props}
-    >
-      {children ? (
-        children
-      ) : (
-        <ProgressTrack>
-          <ProgressIndicator />
-        </ProgressTrack>
-      )}
-    </ProgressPrimitive.Root>
-  );
-}
-
-export function ProgressLabel({
-  className,
-  ...props
-}: ProgressPrimitive.Label.Props): React.ReactElement {
-  return (
-    <ProgressPrimitive.Label
-      className={cn("font-medium text-sm", className)}
-      data-slot="progress-label"
-      {...props}
-    />
-  );
-}
-
 export function ProgressTrack({
   className,
   ...props
@@ -63,6 +28,39 @@ export function ProgressIndicator({
     <ProgressPrimitive.Indicator
       className={cn("bg-primary transition-all duration-500", className)}
       data-slot="progress-indicator"
+      {...props}
+    />
+  );
+}
+
+export function Progress({
+  className,
+  children,
+  ...props
+}: ProgressPrimitive.Root.Props): React.ReactElement {
+  return (
+    <ProgressPrimitive.Root
+      className={cn("flex w-full flex-col gap-2", className)}
+      data-slot="progress"
+      {...props}
+    >
+      {children || (
+        <ProgressTrack>
+          <ProgressIndicator />
+        </ProgressTrack>
+      )}
+    </ProgressPrimitive.Root>
+  );
+}
+
+export function ProgressLabel({
+  className,
+  ...props
+}: ProgressPrimitive.Label.Props): React.ReactElement {
+  return (
+    <ProgressPrimitive.Label
+      className={cn("font-medium text-sm", className)}
+      data-slot="progress-label"
       {...props}
     />
   );

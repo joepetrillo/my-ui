@@ -19,6 +19,12 @@ type BreakpointQuery =
   | `max-${Breakpoint}`
   | `${Breakpoint}:max-${Breakpoint}`;
 
+type CustomMediaQuery = string & {
+  readonly __customMediaQuery?: never;
+};
+
+const noop = (): void => undefined;
+
 function resolveMin(value: Breakpoint | number): string {
   const px = typeof value === "number" ? value : BREAKPOINTS[value];
   return `(min-width: ${px}px)`;
@@ -30,14 +36,14 @@ function resolveMax(value: Breakpoint | number): string {
 }
 
 function parseQuery(
-  query: BreakpointQuery | MediaQueryInput | (string & {})
+  query: BreakpointQuery | MediaQueryInput | CustomMediaQuery
 ): string {
   if (typeof query !== "string") {
     const parts: string[] = [];
-    if (query.min != null) {
+    if (query.min !== undefined) {
       parts.push(resolveMin(query.min));
     }
-    if (query.max != null) {
+    if (query.max !== undefined) {
       parts.push(resolveMax(query.max));
     }
     if (query.pointer === "coarse") {
@@ -83,18 +89,18 @@ export interface MediaQueryInput {
 }
 
 export function useMediaQuery(
-  query: BreakpointQuery | MediaQueryInput | (string & {})
+  query: BreakpointQuery | MediaQueryInput | CustomMediaQuery
 ): boolean {
   const mediaQuery = parseQuery(query);
 
   const subscribe = useCallback(
-    (callback: () => void) => {
+    (onStoreChange: () => void) => {
       if (typeof window === "undefined") {
-        return () => {};
+        return noop;
       }
       const mql = window.matchMedia(mediaQuery);
-      mql.addEventListener("change", callback);
-      return () => mql.removeEventListener("change", callback);
+      mql.addEventListener("change", onStoreChange);
+      return () => mql.removeEventListener("change", onStoreChange);
     },
     [mediaQuery]
   );

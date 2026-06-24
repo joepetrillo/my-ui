@@ -324,7 +324,7 @@ export function ContextMenuSubPopup({
   sideOffset?: ContextMenuPrimitive.Positioner.Props["sideOffset"];
   alignOffset?: ContextMenuPrimitive.Positioner.Props["alignOffset"];
 }): React.ReactElement {
-  const defaultAlignOffset = align !== "center" ? -5 : undefined;
+  const defaultAlignOffset = align === "center" ? undefined : -5;
 
   return (
     <ContextMenuPopup

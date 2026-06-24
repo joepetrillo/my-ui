@@ -11,14 +11,14 @@
     "build": "npm run build:ui && npm run build:sandbox",
     "build:sandbox": "npm run build -w @my-ui/sandbox",
     "build:ui": "npm run build -w @my-ui/ui",
-    "check": "ultracite check",
     "dev": "npm run build:ui && npm run dev -w @my-ui/sandbox",
     "format": "oxfmt . --write",
     "format:check": "oxfmt . --check",
     "lint": "oxlint .",
     "lint:fix": "oxlint . --fix",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "fix": "ultracite fix"
+    "fix": "ultracite fix",
+    "check": "npm run check:api -w @my-ui/ui && ultracite check"
   },
   "devDependencies": {
     "oxfmt": "^0.56.0",

@@ -8,11 +8,14 @@ export function useCopyToClipboard({
 }: {
   timeout?: number;
   onCopy?: () => void;
-} = {}): { copyToClipboard: (value: string) => void; isCopied: boolean } {
+} = {}): {
+  copyToClipboard: (value: string) => Promise<void>;
+  isCopied: boolean;
+} {
   const [isCopied, setIsCopied] = React.useState(false);
   const timeoutIdRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const copyToClipboard = (value: string): void => {
+  const copyToClipboard = async (value: string): Promise<void> => {
     if (typeof window === "undefined" || !navigator.clipboard.writeText) {
       return;
     }
@@ -21,10 +24,13 @@ export function useCopyToClipboard({
       return;
     }
 
-    navigator.clipboard.writeText(value).then(() => {
+    try {
+      await navigator.clipboard.writeText(value);
+
       if (timeoutIdRef.current) {
         clearTimeout(timeoutIdRef.current);
       }
+
       setIsCopied(true);
 
       if (onCopy) {
@@ -37,7 +43,9 @@ export function useCopyToClipboard({
           timeoutIdRef.current = null;
         }, timeout);
       }
-    }, console.error);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   // Cleanup timeout on unmount

@@ -10,6 +10,40 @@ import type React from "react";
 export const Autocomplete: typeof AutocompletePrimitive.Root =
   AutocompletePrimitive.Root;
 
+export function AutocompleteTrigger({
+  className,
+  children,
+  ...props
+}: AutocompletePrimitive.Trigger.Props): React.ReactElement {
+  return (
+    <AutocompletePrimitive.Trigger
+      className={className}
+      data-slot="autocomplete-trigger"
+      {...props}
+    >
+      {children}
+    </AutocompletePrimitive.Trigger>
+  );
+}
+
+export function AutocompleteClear({
+  className,
+  ...props
+}: AutocompletePrimitive.Clear.Props): React.ReactElement {
+  return (
+    <AutocompletePrimitive.Clear
+      className={cn(
+        "absolute end-0.5 top-1/2 inline-flex size-8 shrink-0 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md border border-transparent opacity-80 outline-none transition-[color,background-color,box-shadow,opacity] pointer-coarse:after:absolute pointer-coarse:after:min-h-11 pointer-coarse:after:min-w-11 hover:opacity-100 sm:size-7 [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        className
+      )}
+      data-slot="autocomplete-clear"
+      {...props}
+    >
+      <XIcon />
+    </AutocompletePrimitive.Clear>
+  );
+}
+
 export function AutocompleteInput({
   className,
   showTrigger = false,
@@ -249,24 +283,6 @@ export function AutocompleteList({
   );
 }
 
-export function AutocompleteClear({
-  className,
-  ...props
-}: AutocompletePrimitive.Clear.Props): React.ReactElement {
-  return (
-    <AutocompletePrimitive.Clear
-      className={cn(
-        "absolute end-0.5 top-1/2 inline-flex size-8 shrink-0 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md border border-transparent opacity-80 outline-none transition-[color,background-color,box-shadow,opacity] pointer-coarse:after:absolute pointer-coarse:after:min-h-11 pointer-coarse:after:min-w-11 hover:opacity-100 sm:size-7 [&_svg:not([class*='size-'])]:size-4.5 sm:[&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
-        className
-      )}
-      data-slot="autocomplete-clear"
-      {...props}
-    >
-      <XIcon />
-    </AutocompletePrimitive.Clear>
-  );
-}
-
 export function AutocompleteStatus({
   className,
   ...props
@@ -291,22 +307,6 @@ export function AutocompleteCollection({
       data-slot="autocomplete-collection"
       {...props}
     />
-  );
-}
-
-export function AutocompleteTrigger({
-  className,
-  children,
-  ...props
-}: AutocompletePrimitive.Trigger.Props): React.ReactElement {
-  return (
-    <AutocompletePrimitive.Trigger
-      className={className}
-      data-slot="autocomplete-trigger"
-      {...props}
-    >
-      {children}
-    </AutocompletePrimitive.Trigger>
   );
 }
 

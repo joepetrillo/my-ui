@@ -5,14 +5,10 @@ import {
   AccordionItem,
   AccordionPanel,
   AccordionTrigger,
-} from "@my-ui/ui/components/accordion";
-import {
   Alert,
   AlertAction,
   AlertDescription,
   AlertTitle,
-} from "@my-ui/ui/components/alert";
-import {
   AlertDialog,
   AlertDialogClose,
   AlertDialogDescription,
@@ -21,18 +17,15 @@ import {
   AlertDialogPopup,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@my-ui/ui/components/alert-dialog";
-import {
   Autocomplete,
   AutocompleteEmpty,
   AutocompleteInput,
   AutocompleteItem,
   AutocompleteList,
   AutocompletePopup,
-} from "@my-ui/ui/components/autocomplete";
-import { Avatar, AvatarFallback } from "@my-ui/ui/components/avatar";
-import { Badge } from "@my-ui/ui/components/badge";
-import {
+  Avatar,
+  AvatarFallback,
+  Badge,
   Breadcrumb,
   BreadcrumbEllipsis,
   BreadcrumbItem,
@@ -40,33 +33,26 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@my-ui/ui/components/breadcrumb";
-import { Button, buttonVariants } from "@my-ui/ui/components/button";
-import { Calendar } from "@my-ui/ui/components/calendar";
-import {
+  Button,
+  buttonVariants,
+  Calendar,
   Card,
   CardDescription,
   CardFooter,
   CardHeader,
   CardPanel,
   CardTitle,
-} from "@my-ui/ui/components/card";
-import { Checkbox } from "@my-ui/ui/components/checkbox";
-import { CheckboxGroup } from "@my-ui/ui/components/checkbox-group";
-import {
+  Checkbox,
+  CheckboxGroup,
   Collapsible,
   CollapsiblePanel,
   CollapsibleTrigger,
-} from "@my-ui/ui/components/collapsible";
-import {
   Combobox,
   ComboboxEmpty,
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
   ComboboxPopup,
-} from "@my-ui/ui/components/combobox";
-import {
   Command,
   CommandCollection,
   CommandDialog,
@@ -81,15 +67,11 @@ import {
   CommandPanel,
   CommandSeparator,
   CommandShortcut,
-} from "@my-ui/ui/components/command";
-import {
   ContextMenu,
   ContextMenuItem,
   ContextMenuPopup,
   ContextMenuSeparator,
   ContextMenuTrigger,
-} from "@my-ui/ui/components/context-menu";
-import {
   Dialog,
   DialogClose,
   DialogDescription,
@@ -99,8 +81,6 @@ import {
   DialogPopup,
   DialogTitle,
   DialogTrigger,
-} from "@my-ui/ui/components/dialog";
-import {
   Drawer,
   DrawerClose,
   DrawerDescription,
@@ -110,42 +90,36 @@ import {
   DrawerPopup,
   DrawerTitle,
   DrawerTrigger,
-} from "@my-ui/ui/components/drawer";
-import {
   Empty,
   EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from "@my-ui/ui/components/empty";
-import {
   Field,
   FieldDescription,
   FieldError,
   FieldLabel,
-} from "@my-ui/ui/components/field";
-import { Fieldset, FieldsetLegend } from "@my-ui/ui/components/fieldset";
-import { Form } from "@my-ui/ui/components/form";
-import {
+  Fieldset,
+  FieldsetLegend,
+  Form,
   Frame,
   FrameDescription,
   FrameFooter,
   FrameHeader,
   FramePanel,
   FrameTitle,
-} from "@my-ui/ui/components/frame";
-import { Group, GroupSeparator, GroupText } from "@my-ui/ui/components/group";
-import { Input } from "@my-ui/ui/components/input";
-import {
+  Group,
+  GroupSeparator,
+  GroupText,
+  Input,
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
   InputGroupText,
-} from "@my-ui/ui/components/input-group";
-import { Kbd, KbdGroup } from "@my-ui/ui/components/kbd";
-import { Label } from "@my-ui/ui/components/label";
-import {
+  Kbd,
+  KbdGroup,
+  Label,
   Menu,
   MenuCheckboxItem,
   MenuGroup,
@@ -160,28 +134,20 @@ import {
   MenuSubPopup,
   MenuSubTrigger,
   MenuTrigger,
-} from "@my-ui/ui/components/menu";
-import {
   Meter,
   MeterIndicator,
   MeterLabel,
   MeterTrack,
   MeterValue,
-} from "@my-ui/ui/components/meter";
-import {
   NumberField,
   NumberFieldDecrement,
   NumberFieldGroup,
   NumberFieldIncrement,
   NumberFieldInput,
   NumberFieldScrubArea,
-} from "@my-ui/ui/components/number-field";
-import {
   OTPField,
   OTPFieldInput,
   OTPFieldSeparator,
-} from "@my-ui/ui/components/otp-field";
-import {
   Pagination,
   PaginationContent,
   PaginationEllipsis,
@@ -189,38 +155,29 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@my-ui/ui/components/pagination";
-import {
   Popover,
   PopoverClose,
   PopoverDescription,
   PopoverPopup,
   PopoverTitle,
   PopoverTrigger,
-} from "@my-ui/ui/components/popover";
-import {
   PreviewCard,
   PreviewCardPopup,
   PreviewCardTrigger,
-} from "@my-ui/ui/components/preview-card";
-import {
   Progress,
   ProgressIndicator,
   ProgressLabel,
   ProgressTrack,
   ProgressValue,
-} from "@my-ui/ui/components/progress";
-import { Radio, RadioGroup } from "@my-ui/ui/components/radio-group";
-import { ScrollArea } from "@my-ui/ui/components/scroll-area";
-import {
+  Radio,
+  RadioGroup,
+  ScrollArea,
   Select,
   SelectItem,
   SelectPopup,
   SelectTrigger,
   SelectValue,
-} from "@my-ui/ui/components/select";
-import { Separator } from "@my-ui/ui/components/separator";
-import {
+  Separator,
   Sheet,
   SheetClose,
   SheetDescription,
@@ -230,8 +187,6 @@ import {
   SheetPopup,
   SheetTitle,
   SheetTrigger,
-} from "@my-ui/ui/components/sheet";
-import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -244,12 +199,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-} from "@my-ui/ui/components/sidebar";
-import { Skeleton } from "@my-ui/ui/components/skeleton";
-import { Slider, SliderValue } from "@my-ui/ui/components/slider";
-import { Spinner } from "@my-ui/ui/components/spinner";
-import { Switch } from "@my-ui/ui/components/switch";
-import {
+  Skeleton,
+  Slider,
+  SliderValue,
+  Spinner,
+  Switch,
   Table,
   TableBody,
   TableCaption,
@@ -257,30 +211,28 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@my-ui/ui/components/table";
-import { Tabs, TabsList, TabsPanel, TabsTab } from "@my-ui/ui/components/tabs";
-import { Textarea } from "@my-ui/ui/components/textarea";
-import { ToastProvider, toastManager } from "@my-ui/ui/components/toast";
-import { Toggle } from "@my-ui/ui/components/toggle";
-import {
+  Tabs,
+  TabsList,
+  TabsPanel,
+  TabsTab,
+  Textarea,
+  ToastProvider,
+  toastManager,
+  Toggle,
   ToggleGroup,
   ToggleGroupItem,
   ToggleGroupSeparator,
-} from "@my-ui/ui/components/toggle-group";
-import {
   Toolbar,
   ToolbarButton,
   ToolbarGroup,
   ToolbarSeparator,
-} from "@my-ui/ui/components/toolbar";
-import {
   Tooltip,
   TooltipPopup,
   TooltipProvider,
   TooltipTrigger,
-} from "@my-ui/ui/components/tooltip";
-import { useCopyToClipboard } from "@my-ui/ui/hooks/use-copy-to-clipboard";
-import { useMediaQuery } from "@my-ui/ui/hooks/use-media-query";
+  useCopyToClipboard,
+  useMediaQuery,
+} from "@my-ui/ui";
 import { format } from "date-fns";
 import {
   BoldIcon,
@@ -337,6 +289,33 @@ interface CommandGroupData {
 }
 
 const storageKey = "my-ui-theme-draft";
+const themeModeStorageKey = "theme";
+
+const themeModeItems = [
+  { label: "Light", value: "light" },
+  { label: "Dark", value: "dark" },
+  { label: "System", value: "system" },
+] as const;
+
+const themeModeLabels = {
+  dark: "Dark",
+  light: "Light",
+  system: "System",
+} as const;
+
+const themeColorProperties = [
+  "--background",
+  "--card",
+  "--popover",
+  "--foreground",
+  "--card-foreground",
+  "--popover-foreground",
+  "--primary",
+  "--primary-foreground",
+  "--border",
+  "--input",
+  "--ring",
+] as const;
 
 const defaultThemeDraft: ThemeDraft = {
   background: "#fbfaf7",
@@ -349,6 +328,28 @@ const defaultThemeDraft: ThemeDraft = {
   radius: "0",
   spacing: "0.27",
 };
+
+function isDefaultThemeDraft(draft: ThemeDraft) {
+  return Object.entries(defaultThemeDraft).every(
+    ([key, value]) => draft[key as keyof ThemeDraft] === value
+  );
+}
+
+function hasCustomThemeColors(draft: ThemeDraft) {
+  return (
+    draft.background !== defaultThemeDraft.background ||
+    draft.foreground !== defaultThemeDraft.foreground ||
+    draft.card !== defaultThemeDraft.card ||
+    draft.primary !== defaultThemeDraft.primary ||
+    draft.border !== defaultThemeDraft.border
+  );
+}
+
+function isThemeMode(
+  value: string | undefined
+): value is keyof typeof themeModeLabels {
+  return value === "dark" || value === "light" || value === "system";
+}
 
 const fruitItems: Fruit[] = [
   { label: "Stone", value: "stone" },
@@ -383,22 +384,29 @@ const commandGroups: CommandGroupData[] = [
 
 function applyThemeDraft(draft: ThemeDraft) {
   const root = document.documentElement;
+  const applyColors = hasCustomThemeColors(draft);
   root.style.setProperty("--radius", `${draft.radius}px`);
   root.style.setProperty("--spacing", `${draft.spacing}rem`);
-  root.style.setProperty("--background", draft.background);
-  root.style.setProperty("--card", draft.card);
-  root.style.setProperty("--popover", draft.card);
-  root.style.setProperty("--foreground", draft.foreground);
-  root.style.setProperty("--card-foreground", draft.foreground);
-  root.style.setProperty("--popover-foreground", draft.foreground);
-  root.style.setProperty("--primary", draft.primary);
-  root.style.setProperty(
-    "--primary-foreground",
-    draft.primary === "#252521" ? "#fbfaf7" : draft.background
-  );
-  root.style.setProperty("--border", draft.border);
-  root.style.setProperty("--input", draft.border);
-  root.style.setProperty("--ring", draft.primary);
+  if (applyColors) {
+    root.style.setProperty("--background", draft.background);
+    root.style.setProperty("--card", draft.card);
+    root.style.setProperty("--popover", draft.card);
+    root.style.setProperty("--foreground", draft.foreground);
+    root.style.setProperty("--card-foreground", draft.foreground);
+    root.style.setProperty("--popover-foreground", draft.foreground);
+    root.style.setProperty("--primary", draft.primary);
+    root.style.setProperty(
+      "--primary-foreground",
+      draft.primary === "#252521" ? "#fbfaf7" : draft.background
+    );
+    root.style.setProperty("--border", draft.border);
+    root.style.setProperty("--input", draft.border);
+    root.style.setProperty("--ring", draft.primary);
+  } else {
+    for (const property of themeColorProperties) {
+      root.style.removeProperty(property);
+    }
+  }
   root.dataset.uiMotion = draft.motion;
 
   const fontTarget = document.body;
@@ -420,72 +428,133 @@ function applyThemeDraft(draft: ThemeDraft) {
   }
 }
 
-function ThemeEditor() {
-  const { theme, setTheme } = useTheme();
-  const [draft, setDraft] = React.useState<ThemeDraft>(defaultThemeDraft);
+function InlineScript({ html }: { html: string }) {
+  return (
+    <script
+      dangerouslySetInnerHTML={{ __html: html }}
+      suppressHydrationWarning
+      type={typeof window === "undefined" ? "text/javascript" : "text/plain"}
+    />
+  );
+}
 
-  React.useEffect(() => {
-    const stored = window.localStorage.getItem(storageKey);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as Partial<ThemeDraft>;
-        setDraft({ ...defaultThemeDraft, ...parsed });
-        applyThemeDraft({ ...defaultThemeDraft, ...parsed });
-      } catch {
-        applyThemeDraft(defaultThemeDraft);
-      }
-      return;
-    }
-    applyThemeDraft(defaultThemeDraft);
-  }, []);
+function ThemeRange({
+  label,
+  value,
+  unit,
+  onChange,
+  ...props
+}: {
+  label: string;
+  value: string;
+  unit: string;
+  onChange: (value: string) => void;
+} & Omit<React.ComponentProps<"input">, "onChange" | "type" | "value">) {
+  const id = React.useId();
+  return (
+    <div className="grid gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <Label htmlFor={id}>{label}</Label>
+        <span className="text-muted-foreground text-xs tabular-nums">
+          {value}
+          {unit}
+        </span>
+      </div>
+      <input
+        className="w-full accent-foreground"
+        id={id}
+        type="range"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        {...props}
+      />
+    </div>
+  );
+}
 
-  React.useEffect(() => {
-    window.localStorage.setItem(storageKey, JSON.stringify(draft));
-    applyThemeDraft(draft);
-  }, [draft]);
+function ThemeColor({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const id = React.useId();
+  return (
+    <div className="grid gap-2">
+      <Label className="text-xs" htmlFor={id}>
+        {label}
+      </Label>
+      <label
+        className="flex h-9 cursor-pointer items-center gap-2 border border-input bg-background px-2"
+        htmlFor={id}
+      >
+        <span
+          className="size-5 border border-border"
+          style={{ backgroundColor: value }}
+        />
+        <span className="truncate font-mono text-muted-foreground text-xs">
+          {value}
+        </span>
+        <input
+          className="sr-only"
+          id={id}
+          type="color"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </label>
+    </div>
+  );
+}
 
-  function update<K extends keyof ThemeDraft>(key: K, value: ThemeDraft[K]) {
-    setDraft((current) => ({ ...current, [key]: value }));
-  }
+function ThemeEditorHeader() {
+  return (
+    <div>
+      <h1 className="font-semibold text-lg">my-ui</h1>
+      <p className="text-muted-foreground text-sm">@my-ui/ui sandbox</p>
+    </div>
+  );
+}
 
-  function reset() {
-    window.localStorage.removeItem(storageKey);
-    setDraft(defaultThemeDraft);
-  }
+function ThemeEditorControls({
+  draft,
+  reset,
+  selectedTheme,
+  setTheme,
+  update,
+}: {
+  draft: ThemeDraft;
+  reset: () => void;
+  selectedTheme: keyof typeof themeModeLabels;
+  setTheme: (value: string) => void;
+  update: <K extends keyof ThemeDraft>(key: K, value: ThemeDraft[K]) => void;
+}) {
+  const themeModeValueId = React.useId();
+  const modeValueScript = `(()=>{try{var t=localStorage.getItem(${JSON.stringify(
+    themeModeStorageKey
+  )})||"system";var labels=${JSON.stringify(themeModeLabels)};var el=document.getElementById(${JSON.stringify(
+    themeModeValueId
+  )});if(el)el.textContent=labels[t]||labels.system}catch(e){}})()`;
 
   return (
-    <aside className="sticky top-0 flex max-h-svh flex-col gap-5 border-border border-e bg-card/72 p-5 backdrop-blur lg:overflow-auto">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="font-semibold text-lg">my-ui</h1>
-          <p className="text-muted-foreground text-sm">@my-ui/ui sandbox</p>
-        </div>
-        <Tooltip>
-          <TooltipTrigger render={<Button size="icon" variant="outline" />}>
-            <SlidersHorizontalIcon />
-          </TooltipTrigger>
-          <TooltipPopup>Theme editor</TooltipPopup>
-        </Tooltip>
-      </div>
-
+    <>
       <div className="grid gap-3">
         <Label htmlFor="theme-mode">Mode</Label>
         <Select
           aria-label="Theme mode"
-          value={theme ?? "system"}
+          value={selectedTheme}
           onValueChange={(value) => {
             if (value) {
               setTheme(value);
             }
           }}
-          items={[
-            { label: "Light", value: "light" },
-            { label: "Dark", value: "dark" },
-            { label: "System", value: "system" },
-          ]}
+          items={themeModeItems}
         >
           <SelectTrigger id="theme-mode">
-            <SelectValue />
+            <SelectValue id={themeModeValueId} />
           </SelectTrigger>
           <SelectPopup>
             <SelectItem value="light">Light</SelectItem>
@@ -493,6 +562,7 @@ function ThemeEditor() {
             <SelectItem value="system">System</SelectItem>
           </SelectPopup>
         </Select>
+        <InlineScript html={modeValueScript} />
       </div>
 
       <div className="grid gap-4">
@@ -595,79 +665,102 @@ function ThemeEditor() {
       <Button onClick={reset} variant="outline">
         Reset tokens
       </Button>
-    </aside>
+    </>
   );
 }
 
-function ThemeRange({
-  label,
-  value,
-  unit,
-  onChange,
-  ...props
-}: {
-  label: string;
-  value: string;
-  unit: string;
-  onChange: (value: string) => void;
-} & Omit<React.ComponentProps<"input">, "onChange" | "type" | "value">) {
-  const id = React.useId();
-  return (
-    <div className="grid gap-2">
-      <div className="flex items-center justify-between gap-3">
-        <Label htmlFor={id}>{label}</Label>
-        <span className="text-muted-foreground text-xs tabular-nums">
-          {value}
-          {unit}
-        </span>
-      </div>
-      <input
-        className="w-full accent-foreground"
-        id={id}
-        type="range"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        {...props}
+function ThemeEditor() {
+  const { theme, setTheme } = useTheme();
+  const [draft, setDraft] = React.useState<ThemeDraft>(defaultThemeDraft);
+  const isFirstDraftEffect = React.useRef(true);
+  const selectedTheme = isThemeMode(theme) ? theme : "system";
+
+  React.useEffect(() => {
+    const stored = window.localStorage.getItem(storageKey);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as Partial<ThemeDraft>;
+        const nextDraft = { ...defaultThemeDraft, ...parsed };
+        if (isDefaultThemeDraft(nextDraft)) {
+          window.localStorage.removeItem(storageKey);
+          applyThemeDraft(defaultThemeDraft);
+          return;
+        }
+        setDraft(nextDraft);
+        applyThemeDraft(nextDraft);
+      } catch {
+        applyThemeDraft(defaultThemeDraft);
+      }
+      return;
+    }
+    applyThemeDraft(defaultThemeDraft);
+  }, []);
+
+  React.useEffect(() => {
+    if (isFirstDraftEffect.current) {
+      isFirstDraftEffect.current = false;
+      return;
+    }
+    if (isDefaultThemeDraft(draft)) {
+      window.localStorage.removeItem(storageKey);
+      applyThemeDraft(draft);
+      return;
+    }
+    window.localStorage.setItem(storageKey, JSON.stringify(draft));
+    applyThemeDraft(draft);
+  }, [draft]);
+
+  function update<K extends keyof ThemeDraft>(key: K, value: ThemeDraft[K]) {
+    setDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  function reset() {
+    window.localStorage.removeItem(storageKey);
+    setDraft(defaultThemeDraft);
+  }
+
+  function renderControls() {
+    return (
+      <ThemeEditorControls
+        draft={draft}
+        reset={reset}
+        selectedTheme={selectedTheme}
+        setTheme={setTheme}
+        update={update}
       />
-    </div>
-  );
-}
+    );
+  }
 
-function ThemeColor({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const id = React.useId();
   return (
-    <div className="grid gap-2">
-      <Label className="text-xs" htmlFor={id}>
-        {label}
-      </Label>
-      <label
-        className="flex h-9 cursor-pointer items-center gap-2 border border-input bg-background px-2"
-        htmlFor={id}
-      >
-        <span
-          className="size-5 border border-border"
-          style={{ backgroundColor: value }}
-        />
-        <span className="truncate font-mono text-muted-foreground text-xs">
-          {value}
-        </span>
-        <input
-          className="sr-only"
-          id={id}
-          type="color"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      </label>
-    </div>
+    <>
+      <Sheet>
+        <div className="sticky top-0 z-40 flex items-center justify-between gap-3 border-border border-b bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
+          <ThemeEditorHeader />
+          <SheetTrigger
+            render={<Button aria-label="Open theme editor" variant="outline" />}
+          >
+            <SlidersHorizontalIcon />
+            Theme
+          </SheetTrigger>
+        </div>
+        <SheetPopup className="max-w-80" side="left">
+          <SheetHeader>
+            <SheetTitle>Theme editor</SheetTitle>
+            <SheetDescription>
+              Adjust sandbox tokens and display mode.
+            </SheetDescription>
+          </SheetHeader>
+          <SheetPanel>
+            <div className="grid gap-5">{renderControls()}</div>
+          </SheetPanel>
+        </SheetPopup>
+      </Sheet>
+
+      <aside className="sticky top-0 hidden h-svh flex-col gap-5 overflow-auto border-border border-e bg-card/72 p-5 backdrop-blur lg:flex">
+        <ThemeEditorHeader />
+        {renderControls()}
+      </aside>
+    </>
   );
 }
 

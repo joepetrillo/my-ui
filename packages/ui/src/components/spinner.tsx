@@ -5,13 +5,14 @@ import type React from "react";
 export function Spinner({
   className,
   ...props
-}: React.ComponentProps<typeof Loader2Icon>): React.ReactElement {
+}: React.ComponentProps<"output">): React.ReactElement {
   return (
-    <Loader2Icon
+    <output
       aria-label="Loading"
-      className={cn("animate-spin", className)}
-      role="status"
+      className={cn("inline-flex items-center justify-center", className)}
       {...props}
-    />
+    >
+      <Loader2Icon aria-hidden="true" className="animate-spin" />
+    </output>
   );
 }

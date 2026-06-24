@@ -54,6 +54,35 @@ export function ComboboxChipsInput({
   );
 }
 
+export function ComboboxTrigger({
+  className,
+  children,
+  ...props
+}: ComboboxPrimitive.Trigger.Props): React.ReactElement {
+  return (
+    <ComboboxPrimitive.Trigger
+      className={className}
+      data-slot="combobox-trigger"
+      {...props}
+    >
+      {children}
+    </ComboboxPrimitive.Trigger>
+  );
+}
+
+export function ComboboxClear({
+  className,
+  ...props
+}: ComboboxPrimitive.Clear.Props): React.ReactElement {
+  return (
+    <ComboboxPrimitive.Clear
+      className={className}
+      data-slot="combobox-clear"
+      {...props}
+    />
+  );
+}
+
 export function ComboboxInput({
   className,
   showTrigger = true,
@@ -132,22 +161,6 @@ export function ComboboxInput({
         </ComboboxClear>
       )}
     </ComboboxPrimitive.InputGroup>
-  );
-}
-
-export function ComboboxTrigger({
-  className,
-  children,
-  ...props
-}: ComboboxPrimitive.Trigger.Props): React.ReactElement {
-  return (
-    <ComboboxPrimitive.Trigger
-      className={className}
-      data-slot="combobox-trigger"
-      {...props}
-    >
-      {children}
-    </ComboboxPrimitive.Trigger>
   );
 }
 
@@ -332,19 +345,6 @@ export function ComboboxList({
   );
 }
 
-export function ComboboxClear({
-  className,
-  ...props
-}: ComboboxPrimitive.Clear.Props): React.ReactElement {
-  return (
-    <ComboboxPrimitive.Clear
-      className={className}
-      data-slot="combobox-clear"
-      {...props}
-    />
-  );
-}
-
 export function ComboboxStatus({
   className,
   ...props
@@ -403,6 +403,21 @@ export function ComboboxChips({
   );
 }
 
+export function ComboboxChipRemove(
+  props: ComboboxPrimitive.ChipRemove.Props
+): React.ReactElement {
+  return (
+    <ComboboxPrimitive.ChipRemove
+      aria-label="Remove"
+      className="h-full shrink-0 cursor-pointer px-1.5 opacity-80 hover:opacity-100 [&_svg:not([class*='size-'])]:size-4 sm:[&_svg:not([class*='size-'])]:size-3.5"
+      data-slot="combobox-chip-remove"
+      {...props}
+    >
+      <XIcon />
+    </ComboboxPrimitive.ChipRemove>
+  );
+}
+
 export function ComboboxChip({
   children,
   removeProps,
@@ -419,21 +434,6 @@ export function ComboboxChip({
       {children}
       <ComboboxChipRemove {...removeProps} />
     </ComboboxPrimitive.Chip>
-  );
-}
-
-export function ComboboxChipRemove(
-  props: ComboboxPrimitive.ChipRemove.Props
-): React.ReactElement {
-  return (
-    <ComboboxPrimitive.ChipRemove
-      aria-label="Remove"
-      className="h-full shrink-0 cursor-pointer px-1.5 opacity-80 hover:opacity-100 [&_svg:not([class*='size-'])]:size-4 sm:[&_svg:not([class*='size-'])]:size-3.5"
-      data-slot="combobox-chip-remove"
-      {...props}
-    >
-      <XIcon />
-    </ComboboxPrimitive.ChipRemove>
   );
 }
 

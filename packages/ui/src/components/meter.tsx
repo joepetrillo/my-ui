@@ -4,40 +4,6 @@ import { Meter as MeterPrimitive } from "@base-ui/react/meter";
 import { cn } from "@my-ui/ui/lib/utils";
 import type React from "react";
 
-export function Meter({
-  className,
-  children,
-  ...props
-}: MeterPrimitive.Root.Props): React.ReactElement {
-  return (
-    <MeterPrimitive.Root
-      className={cn("flex w-full flex-col gap-2", className)}
-      {...props}
-    >
-      {children ? (
-        children
-      ) : (
-        <MeterTrack>
-          <MeterIndicator />
-        </MeterTrack>
-      )}
-    </MeterPrimitive.Root>
-  );
-}
-
-export function MeterLabel({
-  className,
-  ...props
-}: MeterPrimitive.Label.Props): React.ReactElement {
-  return (
-    <MeterPrimitive.Label
-      className={cn("font-medium text-foreground text-sm", className)}
-      data-slot="meter-label"
-      {...props}
-    />
-  );
-}
-
 export function MeterTrack({
   className,
   ...props
@@ -59,6 +25,38 @@ export function MeterIndicator({
     <MeterPrimitive.Indicator
       className={cn("bg-primary transition-all duration-500", className)}
       data-slot="meter-indicator"
+      {...props}
+    />
+  );
+}
+
+export function Meter({
+  className,
+  children,
+  ...props
+}: MeterPrimitive.Root.Props): React.ReactElement {
+  return (
+    <MeterPrimitive.Root
+      className={cn("flex w-full flex-col gap-2", className)}
+      {...props}
+    >
+      {children || (
+        <MeterTrack>
+          <MeterIndicator />
+        </MeterTrack>
+      )}
+    </MeterPrimitive.Root>
+  );
+}
+
+export function MeterLabel({
+  className,
+  ...props
+}: MeterPrimitive.Label.Props): React.ReactElement {
+  return (
+    <MeterPrimitive.Label
+      className={cn("font-medium text-foreground text-sm", className)}
+      data-slot="meter-label"
       {...props}
     />
   );

@@ -13,25 +13,269 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./csp-provider": {
+      "import": "./dist/base-ui/csp-provider.js",
+      "types": "./dist/base-ui/csp-provider.d.ts"
+    },
+    "./direction-provider": {
+      "import": "./dist/base-ui/direction-provider.js",
+      "types": "./dist/base-ui/direction-provider.d.ts"
+    },
+    "./merge-props": {
+      "import": "./dist/base-ui/merge-props.js",
+      "types": "./dist/base-ui/merge-props.d.ts"
+    },
+    "./use-render": {
+      "import": "./dist/base-ui/use-render.js",
+      "types": "./dist/base-ui/use-render.d.ts"
+    },
+    "./accordion": {
+      "import": "./dist/components/accordion.js",
+      "types": "./dist/components/accordion.d.ts"
+    },
+    "./alert": {
+      "import": "./dist/components/alert.js",
+      "types": "./dist/components/alert.d.ts"
+    },
+    "./alert-dialog": {
+      "import": "./dist/components/alert-dialog.js",
+      "types": "./dist/components/alert-dialog.d.ts"
+    },
+    "./autocomplete": {
+      "import": "./dist/components/autocomplete.js",
+      "types": "./dist/components/autocomplete.d.ts"
+    },
+    "./avatar": {
+      "import": "./dist/components/avatar.js",
+      "types": "./dist/components/avatar.d.ts"
+    },
+    "./badge": {
+      "import": "./dist/components/badge.js",
+      "types": "./dist/components/badge.d.ts"
+    },
+    "./breadcrumb": {
+      "import": "./dist/components/breadcrumb.js",
+      "types": "./dist/components/breadcrumb.d.ts"
+    },
+    "./button": {
+      "import": "./dist/components/button.js",
+      "types": "./dist/components/button.d.ts"
+    },
+    "./calendar": {
+      "import": "./dist/components/calendar.js",
+      "types": "./dist/components/calendar.d.ts"
+    },
+    "./card": {
+      "import": "./dist/components/card.js",
+      "types": "./dist/components/card.d.ts"
+    },
+    "./checkbox": {
+      "import": "./dist/components/checkbox.js",
+      "types": "./dist/components/checkbox.d.ts"
+    },
+    "./checkbox-group": {
+      "import": "./dist/components/checkbox-group.js",
+      "types": "./dist/components/checkbox-group.d.ts"
+    },
+    "./collapsible": {
+      "import": "./dist/components/collapsible.js",
+      "types": "./dist/components/collapsible.d.ts"
+    },
+    "./combobox": {
+      "import": "./dist/components/combobox.js",
+      "types": "./dist/components/combobox.d.ts"
+    },
+    "./command": {
+      "import": "./dist/components/command.js",
+      "types": "./dist/components/command.d.ts"
+    },
+    "./context-menu": {
+      "import": "./dist/components/context-menu.js",
+      "types": "./dist/components/context-menu.d.ts"
+    },
+    "./dialog": {
+      "import": "./dist/components/dialog.js",
+      "types": "./dist/components/dialog.d.ts"
+    },
+    "./drawer": {
+      "import": "./dist/components/drawer.js",
+      "types": "./dist/components/drawer.d.ts"
+    },
+    "./empty": {
+      "import": "./dist/components/empty.js",
+      "types": "./dist/components/empty.d.ts"
+    },
+    "./field": {
+      "import": "./dist/components/field.js",
+      "types": "./dist/components/field.d.ts"
+    },
+    "./fieldset": {
+      "import": "./dist/components/fieldset.js",
+      "types": "./dist/components/fieldset.d.ts"
+    },
+    "./form": {
+      "import": "./dist/components/form.js",
+      "types": "./dist/components/form.d.ts"
+    },
+    "./frame": {
+      "import": "./dist/components/frame.js",
+      "types": "./dist/components/frame.d.ts"
+    },
+    "./group": {
+      "import": "./dist/components/group.js",
+      "types": "./dist/components/group.d.ts"
+    },
+    "./input": {
+      "import": "./dist/components/input.js",
+      "types": "./dist/components/input.d.ts"
+    },
+    "./input-group": {
+      "import": "./dist/components/input-group.js",
+      "types": "./dist/components/input-group.d.ts"
+    },
+    "./kbd": {
+      "import": "./dist/components/kbd.js",
+      "types": "./dist/components/kbd.d.ts"
+    },
+    "./label": {
+      "import": "./dist/components/label.js",
+      "types": "./dist/components/label.d.ts"
+    },
+    "./menu": {
+      "import": "./dist/components/menu.js",
+      "types": "./dist/components/menu.d.ts"
+    },
+    "./meter": {
+      "import": "./dist/components/meter.js",
+      "types": "./dist/components/meter.d.ts"
+    },
+    "./number-field": {
+      "import": "./dist/components/number-field.js",
+      "types": "./dist/components/number-field.d.ts"
+    },
+    "./otp-field": {
+      "import": "./dist/components/otp-field.js",
+      "types": "./dist/components/otp-field.d.ts"
+    },
+    "./pagination": {
+      "import": "./dist/components/pagination.js",
+      "types": "./dist/components/pagination.d.ts"
+    },
+    "./popover": {
+      "import": "./dist/components/popover.js",
+      "types": "./dist/components/popover.d.ts"
+    },
+    "./preview-card": {
+      "import": "./dist/components/preview-card.js",
+      "types": "./dist/components/preview-card.d.ts"
+    },
+    "./progress": {
+      "import": "./dist/components/progress.js",
+      "types": "./dist/components/progress.d.ts"
+    },
+    "./radio-group": {
+      "import": "./dist/components/radio-group.js",
+      "types": "./dist/components/radio-group.d.ts"
+    },
+    "./scroll-area": {
+      "import": "./dist/components/scroll-area.js",
+      "types": "./dist/components/scroll-area.d.ts"
+    },
+    "./select": {
+      "import": "./dist/components/select.js",
+      "types": "./dist/components/select.d.ts"
+    },
+    "./separator": {
+      "import": "./dist/components/separator.js",
+      "types": "./dist/components/separator.d.ts"
+    },
+    "./sheet": {
+      "import": "./dist/components/sheet.js",
+      "types": "./dist/components/sheet.d.ts"
+    },
+    "./sidebar": {
+      "import": "./dist/components/sidebar.js",
+      "types": "./dist/components/sidebar.d.ts"
+    },
+    "./skeleton": {
+      "import": "./dist/components/skeleton.js",
+      "types": "./dist/components/skeleton.d.ts"
+    },
+    "./slider": {
+      "import": "./dist/components/slider.js",
+      "types": "./dist/components/slider.d.ts"
+    },
+    "./spinner": {
+      "import": "./dist/components/spinner.js",
+      "types": "./dist/components/spinner.d.ts"
+    },
+    "./switch": {
+      "import": "./dist/components/switch.js",
+      "types": "./dist/components/switch.d.ts"
+    },
+    "./table": {
+      "import": "./dist/components/table.js",
+      "types": "./dist/components/table.d.ts"
+    },
+    "./tabs": {
+      "import": "./dist/components/tabs.js",
+      "types": "./dist/components/tabs.d.ts"
+    },
+    "./textarea": {
+      "import": "./dist/components/textarea.js",
+      "types": "./dist/components/textarea.d.ts"
+    },
+    "./toast": {
+      "import": "./dist/components/toast.js",
+      "types": "./dist/components/toast.d.ts"
+    },
+    "./toggle": {
+      "import": "./dist/components/toggle.js",
+      "types": "./dist/components/toggle.d.ts"
+    },
+    "./toggle-group": {
+      "import": "./dist/components/toggle-group.js",
+      "types": "./dist/components/toggle-group.d.ts"
+    },
+    "./toolbar": {
+      "import": "./dist/components/toolbar.js",
+      "types": "./dist/components/toolbar.d.ts"
+    },
+    "./tooltip": {
+      "import": "./dist/components/tooltip.js",
+      "types": "./dist/components/tooltip.d.ts"
+    },
+    "./use-copy-to-clipboard": {
+      "import": "./dist/hooks/use-copy-to-clipboard.js",
+      "types": "./dist/hooks/use-copy-to-clipboard.d.ts"
+    },
+    "./use-media-query": {
+      "import": "./dist/hooks/use-media-query.js",
+      "types": "./dist/hooks/use-media-query.d.ts"
+    },
+    "./utils": {
+      "import": "./dist/lib/utils.js",
+      "types": "./dist/lib/utils.d.ts"
     },
     "./base-ui/*": {
-      "types": "./dist/base-ui/*.d.ts",
-      "import": "./dist/base-ui/*.js"
+      "import": "./dist/base-ui/*.js",
+      "types": "./dist/base-ui/*.d.ts"
     },
     "./components/*": {
-      "types": "./dist/components/*.d.ts",
-      "import": "./dist/components/*.js"
+      "import": "./dist/components/*.js",
+      "types": "./dist/components/*.d.ts"
     },
     "./globals.css": "./src/styles/globals.css",
     "./hooks/*": {
-      "types": "./dist/hooks/*.d.ts",
-      "import": "./dist/hooks/*.js"
+      "import": "./dist/hooks/*.js",
+      "types": "./dist/hooks/*.d.ts"
     },
     "./lib/*": {
-      "types": "./dist/lib/*.d.ts",
-      "import": "./dist/lib/*.js"
+      "import": "./dist/lib/*.js",
+      "types": "./dist/lib/*.d.ts"
     },
     "./styles/globals.css": "./src/styles/globals.css"
   },
@@ -39,8 +283,10 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts src/components/*.tsx src/hooks/*.ts src/lib/*.ts src/base-ui/*.ts --format esm --dts --sourcemap --clean --external @my-ui/ui --external @my-ui/ui/*",
+    "build": "npm run generate:api && tsup src/index.ts src/components/*.tsx src/hooks/*.ts src/lib/*.ts src/base-ui/*.ts --format esm --dts --sourcemap --clean --external @my-ui/ui --external @my-ui/ui/*",
+    "check:api": "tsx scripts/generate-public-api.ts --check",
     "clean": "rm -rf dist *.tsbuildinfo",
+    "generate:api": "tsx scripts/generate-public-api.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

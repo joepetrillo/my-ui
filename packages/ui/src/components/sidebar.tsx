@@ -26,27 +26,24 @@ import type { VariantProps } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";
 import * as React from "react";
 
-const SIDEBAR_COOKIE_NAME: string = "sidebar_state";
-const SIDEBAR_COOKIE_MAX_AGE: number = 60 * 60 * 24 * 7;
-const SIDEBAR_WIDTH: string = "16rem";
-const SIDEBAR_WIDTH_MOBILE: string = "18rem";
-const SIDEBAR_WIDTH_ICON: string = "3rem";
-const SIDEBAR_KEYBOARD_SHORTCUT: string = "b";
+const SIDEBAR_COOKIE_NAME = "sidebar_state";
+const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
+const SIDEBAR_WIDTH = "16rem";
+const SIDEBAR_WIDTH_MOBILE = "18rem";
+const SIDEBAR_WIDTH_ICON = "3rem";
+const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
 function persistSidebarState(open: boolean): void {
-  const expires = Date.now() + SIDEBAR_COOKIE_MAX_AGE * 1000;
-
-  if ("cookieStore" in window) {
-    void window.cookieStore.set({
-      expires,
-      name: SIDEBAR_COOKIE_NAME,
-      path: "/",
-      value: String(open),
-    });
+  if (!("cookieStore" in window)) {
     return;
   }
 
-  document.cookie = `${SIDEBAR_COOKIE_NAME}=${String(open)}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}; SameSite=Lax`;
+  void window.cookieStore.set({
+    expires: Date.now() + SIDEBAR_COOKIE_MAX_AGE * 1000,
+    name: SIDEBAR_COOKIE_NAME,
+    path: "/",
+    value: String(open),
+  });
 }
 
 const sidebarMenuButtonVariants = cva(
@@ -114,7 +111,7 @@ export function SidebarProvider({
   const [_open, _setOpen] = React.useState(defaultOpen);
   const open = openProp ?? _open;
   const setOpen = React.useCallback(
-    async (value: boolean | ((value: boolean) => boolean)) => {
+    (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === "function" ? value(open) : value;
       if (setOpenProp) {
         setOpenProp(openState);
@@ -130,7 +127,9 @@ export function SidebarProvider({
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(
     () =>
-      isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open),
+      isMobile
+        ? setOpenMobile((currentOpen) => !currentOpen)
+        : setOpen((currentOpen) => !currentOpen),
     [isMobile, setOpen]
   );
 
@@ -575,10 +574,15 @@ export function SidebarMenuButton({
     return buttonElement;
   }
 
-  if (typeof tooltip === "string") {
-    tooltip = {
-      children: tooltip,
-    };
+  const tooltipProps =
+    typeof tooltip === "string"
+      ? {
+          children: tooltip,
+        }
+      : tooltip;
+
+  if (!tooltipProps) {
+    return buttonElement;
   }
 
   return (
@@ -590,7 +594,7 @@ export function SidebarMenuButton({
         align="center"
         hidden={state !== "collapsed" || isMobile}
         side="right"
-        {...tooltip}
+        {...tooltipProps}
       />
     </Tooltip>
   );
