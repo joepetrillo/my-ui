@@ -674,6 +674,14 @@ function ThemeEditor() {
   const [draft, setDraft] = React.useState<ThemeDraft>(defaultThemeDraft);
   const isFirstDraftEffect = React.useRef(true);
   const selectedTheme = isThemeMode(theme) ? theme : "system";
+  const isWide = useMediaQuery("lg");
+  const [sheetOpen, setSheetOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (isWide) {
+      setSheetOpen(false);
+    }
+  }, [isWide]);
 
   React.useEffect(() => {
     const stored = window.localStorage.getItem(storageKey);
@@ -733,7 +741,7 @@ function ThemeEditor() {
 
   return (
     <>
-      <Sheet>
+      <Sheet onOpenChange={setSheetOpen} open={sheetOpen}>
         <div className="sticky top-0 z-40 flex items-center justify-between gap-3 border-border border-b bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
           <ThemeEditorHeader />
           <SheetTrigger
