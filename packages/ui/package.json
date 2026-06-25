@@ -52,9 +52,21 @@
       "import": "./dist/components/avatar.js",
       "types": "./dist/components/avatar.d.ts"
     },
+    "./avatar-image": {
+      "import": "./dist/components/avatar-image.js",
+      "types": "./dist/components/avatar-image.d.ts"
+    },
+    "./avatar-fallback": {
+      "import": "./dist/components/avatar-fallback.js",
+      "types": "./dist/components/avatar-fallback.d.ts"
+    },
     "./badge": {
       "import": "./dist/components/badge.js",
       "types": "./dist/components/badge.d.ts"
+    },
+    "./badge-variants": {
+      "import": "./dist/components/badge-variants.js",
+      "types": "./dist/components/badge-variants.d.ts"
     },
     "./breadcrumb": {
       "import": "./dist/components/breadcrumb.js",
@@ -63,6 +75,10 @@
     "./button": {
       "import": "./dist/components/button.js",
       "types": "./dist/components/button.d.ts"
+    },
+    "./button-variants": {
+      "import": "./dist/components/button-variants.js",
+      "types": "./dist/components/button-variants.d.ts"
     },
     "./calendar": {
       "import": "./dist/components/calendar.js",
@@ -84,9 +100,21 @@
       "import": "./dist/components/collapsible.js",
       "types": "./dist/components/collapsible.d.ts"
     },
+    "./collapsible-trigger": {
+      "import": "./dist/components/collapsible-trigger.js",
+      "types": "./dist/components/collapsible-trigger.d.ts"
+    },
+    "./collapsible-panel": {
+      "import": "./dist/components/collapsible-panel.js",
+      "types": "./dist/components/collapsible-panel.d.ts"
+    },
     "./combobox": {
       "import": "./dist/components/combobox.js",
       "types": "./dist/components/combobox.d.ts"
+    },
+    "./combobox-context": {
+      "import": "./dist/components/combobox-context.js",
+      "types": "./dist/components/combobox-context.d.ts"
     },
     "./command": {
       "import": "./dist/components/command.js",
@@ -128,6 +156,10 @@
       "import": "./dist/components/group.js",
       "types": "./dist/components/group.d.ts"
     },
+    "./group-variants": {
+      "import": "./dist/components/group-variants.js",
+      "types": "./dist/components/group-variants.d.ts"
+    },
     "./input": {
       "import": "./dist/components/input.js",
       "types": "./dist/components/input.d.ts"
@@ -135,6 +167,14 @@
     "./input-group": {
       "import": "./dist/components/input-group.js",
       "types": "./dist/components/input-group.d.ts"
+    },
+    "./input-group-addon": {
+      "import": "./dist/components/input-group-addon.js",
+      "types": "./dist/components/input-group-addon.d.ts"
+    },
+    "./input-group-text": {
+      "import": "./dist/components/input-group-text.js",
+      "types": "./dist/components/input-group-text.d.ts"
     },
     "./kbd": {
       "import": "./dist/components/kbd.js",
@@ -156,9 +196,21 @@
       "import": "./dist/components/number-field.js",
       "types": "./dist/components/number-field.d.ts"
     },
+    "./number-field-context": {
+      "import": "./dist/components/number-field-context.js",
+      "types": "./dist/components/number-field-context.d.ts"
+    },
     "./otp-field": {
       "import": "./dist/components/otp-field.js",
       "types": "./dist/components/otp-field.d.ts"
+    },
+    "./otp-field-input": {
+      "import": "./dist/components/otp-field-input.js",
+      "types": "./dist/components/otp-field-input.d.ts"
+    },
+    "./otp-field-separator": {
+      "import": "./dist/components/otp-field-separator.js",
+      "types": "./dist/components/otp-field-separator.d.ts"
     },
     "./pagination": {
       "import": "./dist/components/pagination.js",
@@ -187,6 +239,10 @@
     "./select": {
       "import": "./dist/components/select.js",
       "types": "./dist/components/select.d.ts"
+    },
+    "./select-variants": {
+      "import": "./dist/components/select-variants.js",
+      "types": "./dist/components/select-variants.d.ts"
     },
     "./separator": {
       "import": "./dist/components/separator.js",
@@ -232,9 +288,17 @@
       "import": "./dist/components/toggle.js",
       "types": "./dist/components/toggle.d.ts"
     },
+    "./toggle-variants": {
+      "import": "./dist/components/toggle-variants.js",
+      "types": "./dist/components/toggle-variants.d.ts"
+    },
     "./toggle-group": {
       "import": "./dist/components/toggle-group.js",
       "types": "./dist/components/toggle-group.d.ts"
+    },
+    "./toggle-group-context": {
+      "import": "./dist/components/toggle-group-context.js",
+      "types": "./dist/components/toggle-group-context.d.ts"
     },
     "./toolbar": {
       "import": "./dist/components/toolbar.js",
@@ -279,7 +343,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "npm run generate:api && tsup src/index.ts src/components/*.tsx src/hooks/*.ts src/lib/*.ts src/base-ui/*.ts --format esm --dts --sourcemap --clean --external @my-ui/ui --external @my-ui/ui/*",
+    "build": "bun run generate:api && tsup",
+    "dev": "bun run generate:api && tsup --watch --silent --no-clean",
     "check:api": "tsx scripts/generate-public-api.ts --check",
     "clean": "rm -rf dist *.tsbuildinfo",
     "generate:api": "tsx scripts/generate-public-api.ts",

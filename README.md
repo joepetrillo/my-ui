@@ -11,10 +11,10 @@ A reusable React UI package built on Base UI primitives, Tailwind CSS v4 tokens,
 ## Commands
 
 ```bash
-npm install
-npm run dev
-npm run build
-npm run check
+bun install
+bun run dev
+bun run build
+bun run check
 ```
 
 The sandbox runs at `http://localhost:3000`.
@@ -24,6 +24,6 @@ The sandbox runs at `http://localhost:3000`.
 Update the package name in `packages/ui/package.json` if you want a personal npm scope, then run:
 
 ```bash
-npm run build:ui
-npm publish -w @my-ui/ui
+bun run build:ui
+cd packages/ui && bun publish
 ```

@@ -53,14 +53,12 @@ export {
   useAutocompleteFilter,
   AutocompletePrimitive,
 } from "./components/autocomplete";
-export {
-  Avatar,
-  AvatarImage,
-  AvatarFallback,
-  AvatarPrimitive,
-} from "./components/avatar";
-export { badgeVariants, Badge } from "./components/badge";
+export { Avatar, AvatarPrimitive } from "./components/avatar";
+export { AvatarImage } from "./components/avatar-image";
+export { AvatarFallback } from "./components/avatar-fallback";
+export { Badge } from "./components/badge";
 export type { BadgeProps } from "./components/badge";
+export { badgeVariants } from "./components/badge-variants";
 export {
   Breadcrumb,
   BreadcrumbList,
@@ -70,8 +68,9 @@ export {
   BreadcrumbSeparator,
   BreadcrumbEllipsis,
 } from "./components/breadcrumb";
-export { buttonVariants, Button } from "./components/button";
+export { Button } from "./components/button";
 export type { ButtonProps } from "./components/button";
+export { buttonVariants } from "./components/button-variants";
 export { Calendar } from "./components/calendar";
 export {
   Card,
@@ -94,15 +93,13 @@ export {
   CheckboxGroup,
   CheckboxGroupPrimitive,
 } from "./components/checkbox-group";
+export { Collapsible, CollapsiblePrimitive } from "./components/collapsible";
+export { CollapsibleTrigger } from "./components/collapsible-trigger";
 export {
-  Collapsible,
-  CollapsibleTrigger,
   CollapsiblePanel,
-  CollapsiblePrimitive,
   CollapsibleContent,
-} from "./components/collapsible";
+} from "./components/collapsible-panel";
 export {
-  ComboboxContext,
   Combobox,
   ComboboxChipsInput,
   ComboboxTrigger,
@@ -125,6 +122,7 @@ export {
   useComboboxFilter,
   ComboboxPrimitive,
 } from "./components/combobox";
+export { ComboboxContext } from "./components/combobox-context";
 export {
   CommandDialog,
   CommandDialogPortal,
@@ -245,7 +243,6 @@ export {
   FrameFooter,
 } from "./components/frame";
 export {
-  groupVariants,
   Group,
   GroupText,
   GroupSeparator,
@@ -253,15 +250,16 @@ export {
   ButtonGroupText,
   ButtonGroupSeparator,
 } from "./components/group";
+export { groupVariants } from "./components/group-variants";
 export { Input, InputPrimitive } from "./components/input";
 export type { InputProps } from "./components/input";
 export {
   InputGroup,
-  InputGroupAddon,
-  InputGroupText,
   InputGroupInput,
   InputGroupTextarea,
 } from "./components/input-group";
+export { InputGroupAddon } from "./components/input-group-addon";
+export { InputGroupText } from "./components/input-group-text";
 export { Kbd, KbdGroup } from "./components/kbd";
 export { Label } from "./components/label";
 export {
@@ -309,7 +307,6 @@ export {
   MeterPrimitive,
 } from "./components/meter";
 export {
-  NumberFieldContext,
   NumberField,
   NumberFieldGroup,
   NumberFieldDecrement,
@@ -319,12 +316,10 @@ export {
   NumberFieldScrubArea,
   NumberFieldPrimitive,
 } from "./components/number-field";
-export {
-  OTPField,
-  OTPFieldInput,
-  OTPFieldSeparator,
-  OTPFieldPrimitive,
-} from "./components/otp-field";
+export { NumberFieldContext } from "./components/number-field-context";
+export { OTPField, OTPFieldPrimitive } from "./components/otp-field";
+export { OTPFieldInput } from "./components/otp-field-input";
+export { OTPFieldSeparator } from "./components/otp-field-separator";
 export {
   Pagination,
   PaginationContent,
@@ -377,8 +372,6 @@ export {
 } from "./components/scroll-area";
 export {
   Select,
-  selectTriggerVariants,
-  selectTriggerIconClassName,
   SelectButton,
   SelectTrigger,
   SelectValue,
@@ -392,6 +385,10 @@ export {
   SelectContent,
 } from "./components/select";
 export type { SelectButtonProps } from "./components/select";
+export {
+  selectTriggerVariants,
+  selectTriggerIconClassName,
+} from "./components/select-variants";
 export { Separator, SeparatorPrimitive } from "./components/separator";
 export {
   Sheet,
@@ -449,14 +446,15 @@ export type {
   ToastProviderProps,
   AnchoredToastProviderProps,
 } from "./components/toast";
-export { toggleVariants, Toggle, TogglePrimitive } from "./components/toggle";
+export { Toggle, TogglePrimitive } from "./components/toggle";
+export { toggleVariants } from "./components/toggle-variants";
 export {
-  ToggleGroupContext,
   ToggleGroup,
   ToggleGroupItem,
   ToggleGroupSeparator,
   ToggleGroupPrimitive,
 } from "./components/toggle-group";
+export { ToggleGroupContext } from "./components/toggle-group-context";
 export {
   Toolbar,
   ToolbarButton,

@@ -4,17 +4,11 @@ import type { Toggle as TogglePrimitive } from "@base-ui/react/toggle";
 import { ToggleGroup as ToggleGroupPrimitive } from "@base-ui/react/toggle-group";
 import { Separator } from "@my-ui/ui/components/separator";
 import { Toggle as ToggleComponent } from "@my-ui/ui/components/toggle";
-import type { toggleVariants } from "@my-ui/ui/components/toggle";
+import { ToggleGroupContext } from "@my-ui/ui/components/toggle-group-context";
+import type { toggleVariants } from "@my-ui/ui/components/toggle-variants";
 import { cn } from "@my-ui/ui/lib/utils";
 import type { VariantProps } from "class-variance-authority";
 import * as React from "react";
-
-export const ToggleGroupContext: React.Context<
-  VariantProps<typeof toggleVariants>
-> = React.createContext<VariantProps<typeof toggleVariants>>({
-  size: "default",
-  variant: "default",
-});
 
 export function ToggleGroup({
   className,
@@ -25,6 +19,10 @@ export function ToggleGroup({
   ...props
 }: ToggleGroupPrimitive.Props &
   VariantProps<typeof toggleVariants>): React.ReactElement {
+  const contextValue = React.useMemo(
+    () => ({ size, variant }),
+    [size, variant]
+  );
   let layoutClassName = "gap-0.5";
 
   if (variant !== "default") {
@@ -52,7 +50,7 @@ export function ToggleGroup({
       orientation={orientation}
       {...props}
     >
-      <ToggleGroupContext.Provider value={{ size, variant }}>
+      <ToggleGroupContext.Provider value={contextValue}>
         {children}
       </ToggleGroupContext.Provider>
     </ToggleGroupPrimitive>

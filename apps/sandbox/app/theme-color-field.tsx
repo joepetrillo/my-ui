@@ -31,6 +31,20 @@ function normalizeHexInput(raw: string) {
   return `#${digits}`;
 }
 
+// react-colorful drives its drag with window-level mouse listeners and never
+// captures the pointer, so releasing a drag outside the popup lands a
+// synthesized `click` on an ancestor element. Base UI's popover reads that as
+// an outside press and closes — losing the in-progress color. Capturing the
+// pointer to the slider keeps every move/up/click targeted inside the popup,
+// so the drag stays self-contained no matter where the cursor is released.
+function capturePickerPointer(event: React.PointerEvent<HTMLDivElement>) {
+  const interactive = (event.target as HTMLElement).closest<HTMLElement>(
+    ".react-colorful__interactive"
+  );
+
+  interactive?.setPointerCapture(event.pointerId);
+}
+
 const HexColorPicker = dynamic(
   async () => {
     const mod = await import("react-colorful");
@@ -70,19 +84,15 @@ export const ThemeColorField = React.memo(
     const triggerId = React.useId();
     const colorInputId = React.useId();
     const [open, setOpen] = React.useState(false);
-    const [localValue, setLocalValue] = React.useState(value);
+    // While the popover is open the user edits a local draft; when it is
+    // closed there is no draft and the live `value` prop is shown directly.
+    const [draft, setDraft] = React.useState<string | null>(null);
+    const localValue = draft ?? value;
     const committedValueRef = React.useRef(value);
     const previewFrameRef = React.useRef<number | null>(null);
     const pendingPreviewRef = React.useRef<string | null>(null);
     const previewSessionRef = React.useRef(0);
     const closeIntentRef = React.useRef<"apply" | "reset" | null>(null);
-
-    React.useEffect(() => {
-      if (!open) {
-        setLocalValue(value);
-        committedValueRef.current = value;
-      }
-    }, [open, value]);
 
     React.useEffect(
       () => () => {
@@ -144,13 +154,13 @@ export const ThemeColorField = React.memo(
 
     function handlePickerChange(nextValue: string) {
       const normalized = nextValue.toLowerCase();
-      setLocalValue(normalized);
+      setDraft(normalized);
       schedulePreview(normalized);
     }
 
     function handleColorInputChange(nextValue: string) {
       const lower = normalizeHexInput(nextValue);
-      setLocalValue(lower);
+      setDraft(lower);
 
       if (isValidHexColor(lower)) {
         schedulePreview(lower);
@@ -169,7 +179,7 @@ export const ThemeColorField = React.memo(
       closeIntentRef.current = "apply";
       onCommit(nextColor);
       committedValueRef.current = nextColor;
-      setLocalValue(nextColor);
+      setDraft(nextColor);
       setOpen(false);
     }
 
@@ -177,26 +187,13 @@ export const ThemeColorField = React.memo(
       previewSessionRef.current += 1;
       clearPendingPreview();
       onCancelPreview();
-      setLocalValue(committedValueRef.current);
-    }
-
-    function handlePopoverKeyDown(event: React.KeyboardEvent) {
-      if (event.key !== "Enter" || event.defaultPrevented) {
-        return;
-      }
-
-      if (!isValidHexColor(localValue)) {
-        return;
-      }
-
-      event.preventDefault();
-      commitAndClose();
+      setDraft(committedValueRef.current);
     }
 
     function handleOpenChange(nextOpen: boolean) {
       if (nextOpen) {
         previewSessionRef.current += 1;
-        setLocalValue(value);
+        setDraft(value);
         committedValueRef.current = value;
         setOpen(true);
         return;
@@ -230,7 +227,7 @@ export const ThemeColorField = React.memo(
       }
 
       pendingPreviewRef.current = null;
-      setLocalValue(defaultValue);
+      setDraft(defaultValue);
       committedValueRef.current = defaultValue;
       onPreview(defaultValue);
       closeIntentRef.current = "reset";
@@ -248,7 +245,7 @@ export const ThemeColorField = React.memo(
           <PopoverTrigger
             aria-label={`${label}, ${triggerDisplayValue}`}
             className={cn(
-              "flex h-10 w-full cursor-pointer items-center gap-2.5 rounded-[8px] border border-input bg-background px-2.5 shadow-xs/5 outline-none transition-[box-shadow,background-color,border-color] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/24 sm:h-9",
+              "flex h-10 w-full cursor-pointer items-center gap-2.5 rounded-lg border border-input bg-background px-2.5 shadow-xs/5 outline-none transition-[box-shadow,background-color,border-color] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/24 sm:h-9",
               isModified && "border-foreground/18 bg-muted/35",
               hasPendingChange && "border-foreground/18 bg-muted/35"
             )}
@@ -270,15 +267,16 @@ export const ThemeColorField = React.memo(
           <PopoverPopup
             align="start"
             className="w-[min(16rem,calc(100vw-2rem))] gap-0"
-            onKeyDownCapture={handlePopoverKeyDown}
           >
             <PopoverTitle className="sr-only">{label}</PopoverTitle>
-            <HexColorPicker
-              aria-label={`${label} color picker`}
-              className="theme-color-picker w-full!"
-              color={pickerColor}
-              onChange={handlePickerChange}
-            />
+            <div onPointerDownCapture={capturePickerPointer}>
+              <HexColorPicker
+                aria-label={`${label} color picker`}
+                className="theme-color-picker w-full!"
+                color={pickerColor}
+                onChange={handlePickerChange}
+              />
+            </div>
             <div className="grid gap-2 pt-3">
               <Label className="sr-only" htmlFor={colorInputId}>
                 Color

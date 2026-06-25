@@ -268,7 +268,7 @@ function checkGeneratedFile(
   }
 
   process.stderr.write(
-    `${filePath} is out of date. Run npm run generate:api.\n`
+    `${filePath} is out of date. Run bun run generate:api.\n`
   );
   return false;
 }

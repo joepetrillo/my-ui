@@ -342,7 +342,7 @@ export function normalizeHexColor(value: unknown) {
   return hexColorPattern.test(trimmed) ? trimmed : undefined;
 }
 
-export function isValidThemeColor(value: string) {
+function isValidThemeColor(value: string) {
   const trimmed = value.trim();
 
   if (!trimmed) {
@@ -358,20 +358,6 @@ export function isValidThemeColor(value: string) {
   }
 
   return parseCssColorWithCanvas(trimmed) !== null;
-}
-
-export function normalizeThemeColor(value: unknown) {
-  if (typeof value !== "string") {
-    return;
-  }
-
-  const trimmed = value.trim();
-
-  if (!isValidThemeColor(trimmed)) {
-    return;
-  }
-
-  return trimmed;
 }
 
 export function resolveColorToHex(
@@ -393,7 +379,7 @@ export function resolveColorToHex(
   return colorToHex({ ...canvasColor, a: 1 });
 }
 
-export function resolveThemeColorToHex(colorValue: string) {
+function resolveThemeColorToHex(colorValue: string) {
   const parsedColor = parseCssColor(colorValue);
 
   if (parsedColor) {

@@ -2,8 +2,8 @@
 
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { buttonVariants } from "@my-ui/ui/components/button";
 import type { Button } from "@my-ui/ui/components/button";
+import { buttonVariants } from "@my-ui/ui/components/button-variants";
 import { cn } from "@my-ui/ui/lib/utils";
 import {
   ChevronLeftIcon,

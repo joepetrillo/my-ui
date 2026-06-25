@@ -405,6 +405,45 @@ function createDefaultThemeDraft(): ThemeDraft {
 
 const defaultThemeDraft = createDefaultThemeDraft();
 
+// `isMounted` is read from an external store rather than seeded by a mount
+// effect so the first client render matches the server (no post-paint flash).
+const subscribeNoop = () => () => {
+  // No external source to subscribe to; the snapshot never changes.
+};
+
+interface ThemeResolveState {
+  tokenValues: Record<ColorToken, string>;
+  areTokenValuesResolved: boolean;
+  isThemeResolved: boolean;
+}
+
+type ThemeResolveAction =
+  | { type: "resolve-start" }
+  | {
+      type: "resolve-complete";
+      tokenValues: Record<ColorToken, string>;
+      themeReady: boolean;
+    };
+
+function themeResolveReducer(
+  state: ThemeResolveState,
+  action: ThemeResolveAction
+): ThemeResolveState {
+  if (action.type === "resolve-start") {
+    if (!state.areTokenValuesResolved) {
+      return state;
+    }
+
+    return { ...state, areTokenValuesResolved: false };
+  }
+
+  return {
+    areTokenValuesResolved: true,
+    isThemeResolved: state.isThemeResolved || action.themeReady,
+    tokenValues: action.tokenValues,
+  };
+}
+
 function parseThemeRem(value: string) {
   const parsed = Number.parseFloat(value);
 
@@ -621,6 +660,71 @@ function parseStoredThemeDraft(storedValue: string): ThemeDraft {
   };
 }
 
+// The theme draft is persisted in localStorage, so localStorage is its source
+// of truth. Reading it through useSyncExternalStore keeps server and client
+// renders consistent and removes the load/persist mount effects.
+const themeDraftListeners = new Set<() => void>();
+let cachedThemeDraftRaw: string | null = null;
+let cachedThemeDraft: ThemeDraft = defaultThemeDraft;
+
+function readThemeDraftSnapshot(): ThemeDraft {
+  let raw: string | null = null;
+
+  try {
+    raw = window.localStorage.getItem(storageKey);
+  } catch {
+    raw = null;
+  }
+
+  if (raw === cachedThemeDraftRaw) {
+    return cachedThemeDraft;
+  }
+
+  cachedThemeDraftRaw = raw;
+
+  if (!raw) {
+    cachedThemeDraft = defaultThemeDraft;
+    return cachedThemeDraft;
+  }
+
+  try {
+    const parsed = parseStoredThemeDraft(raw);
+    cachedThemeDraft = isDefaultThemeDraft(parsed) ? defaultThemeDraft : parsed;
+  } catch {
+    cachedThemeDraft = defaultThemeDraft;
+  }
+
+  return cachedThemeDraft;
+}
+
+function subscribeThemeDraft(listener: () => void) {
+  themeDraftListeners.add(listener);
+  return () => {
+    themeDraftListeners.delete(listener);
+  };
+}
+
+function writeThemeDraft(next: ThemeDraft) {
+  const isDefault = isDefaultThemeDraft(next);
+
+  try {
+    if (isDefault) {
+      window.localStorage.removeItem(storageKey);
+    } else {
+      window.localStorage.setItem(storageKey, JSON.stringify(next));
+    }
+  } catch {
+    // Ignore storage failures (private mode, quota, etc.).
+  }
+
+  cachedThemeDraftRaw = isDefault ? null : JSON.stringify(next);
+  cachedThemeDraft = next;
+
+  for (const listener of themeDraftListeners) {
+    listener();
+  }
+}
+
 function resolveTokenColor(probe: HTMLElement, token: ColorToken) {
   probe.style.backgroundColor = "";
   probe.style.backgroundColor = `var(${cssVariableName(token)})`;
@@ -787,19 +891,38 @@ function getColorValue(
 
 function useSandboxThemeDraft() {
   const { resolvedTheme, setTheme } = useTheme();
-  const [draft, setDraft] = React.useState<ThemeDraft>(() =>
-    createDefaultThemeDraft()
+  const draft = React.useSyncExternalStore(
+    subscribeThemeDraft,
+    readThemeDraftSnapshot,
+    () => defaultThemeDraft
   );
-  const [tokenValues, setTokenValues] = React.useState<
-    Record<ColorToken, string>
-  >(fallbackTokenValues.light);
-  const [areTokenValuesResolved, setAreTokenValuesResolved] =
-    React.useState(false);
-  const [isThemeResolved, setIsThemeResolved] = React.useState(false);
-  const isFirstDraftEffect = React.useRef(true);
-  const [isMounted, setIsMounted] = React.useState(false);
+  const setDraft = React.useCallback(
+    (updater: ThemeDraft | ((current: ThemeDraft) => ThemeDraft)) => {
+      const current = readThemeDraftSnapshot();
+      const next = typeof updater === "function" ? updater(current) : updater;
+      writeThemeDraft(next);
+    },
+    []
+  );
+  const isMounted = React.useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false
+  );
+  const [resolveState, dispatchResolve] = React.useReducer(
+    themeResolveReducer,
+    {
+      areTokenValuesResolved: false,
+      isThemeResolved: false,
+      tokenValues: fallbackTokenValues.light,
+    }
+  );
+  const { tokenValues, areTokenValuesResolved, isThemeResolved } = resolveState;
   const previewRef = React.useRef<HTMLElement>(null);
-  const liveColorPreviewRef = React.useRef(new Map<ColorToken, string>());
+  const liveColorPreviewRef = React.useRef<Map<ColorToken, string> | null>(
+    null
+  );
+  liveColorPreviewRef.current ??= new Map<ColorToken, string>();
   const colorPreviewEpochRef = React.useRef(0);
   const selectedTheme = isResolvedThemeMode(resolvedTheme)
     ? resolvedTheme
@@ -808,73 +931,24 @@ function useSandboxThemeDraft() {
     isMounted && isResolvedThemeMode(resolvedTheme) ? resolvedTheme : "light";
 
   React.useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  React.useEffect(() => {
-    if (
-      isThemeResolved ||
-      !isMounted ||
-      !isResolvedThemeMode(resolvedTheme) ||
-      !areTokenValuesResolved
-    ) {
-      return;
-    }
-
-    setIsThemeResolved(true);
-  }, [areTokenValuesResolved, isMounted, isThemeResolved, resolvedTheme]);
-
-  React.useEffect(() => {
     clearLegacyDocumentThemeStyles();
   }, []);
 
   React.useEffect(() => {
-    setAreTokenValuesResolved(false);
+    dispatchResolve({ type: "resolve-start" });
 
     const frame = window.requestAnimationFrame(() => {
-      setTokenValues(
-        readResolvedTokenValues(fallbackTokenValues[effectiveTheme])
-      );
-      setAreTokenValuesResolved(true);
+      dispatchResolve({
+        themeReady: isMounted && isResolvedThemeMode(resolvedTheme),
+        tokenValues: readResolvedTokenValues(
+          fallbackTokenValues[effectiveTheme]
+        ),
+        type: "resolve-complete",
+      });
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [effectiveTheme]);
-
-  React.useEffect(() => {
-    const stored = window.localStorage.getItem(storageKey);
-
-    if (!stored) {
-      return;
-    }
-
-    try {
-      const nextDraft = parseStoredThemeDraft(stored);
-
-      if (isDefaultThemeDraft(nextDraft)) {
-        window.localStorage.removeItem(storageKey);
-        return;
-      }
-
-      setDraft(nextDraft);
-    } catch {
-      window.localStorage.removeItem(storageKey);
-    }
-  }, []);
-
-  React.useEffect(() => {
-    if (isFirstDraftEffect.current) {
-      isFirstDraftEffect.current = false;
-      return;
-    }
-
-    if (isDefaultThemeDraft(draft)) {
-      window.localStorage.removeItem(storageKey);
-      return;
-    }
-
-    window.localStorage.setItem(storageKey, JSON.stringify(draft));
-  }, [draft]);
+  }, [effectiveTheme, isMounted, resolvedTheme]);
 
   const previewStyle = React.useMemo(
     () => createPreviewStyle(draft, effectiveTheme, tokenValues),
@@ -898,7 +972,7 @@ function useSandboxThemeDraft() {
     ) => {
       setDraft((current) => ({ ...current, [key]: value }));
     },
-    []
+    [setDraft]
   );
 
   const previewColor = React.useCallback(
@@ -920,9 +994,9 @@ function useSandboxThemeDraft() {
         }
 
         if (overrideColor) {
-          liveColorPreviewRef.current.set(token, overrideColor);
+          liveColorPreviewRef.current?.set(token, overrideColor);
         } else {
-          liveColorPreviewRef.current.delete(token);
+          liveColorPreviewRef.current?.delete(token);
         }
 
         setPreviewStyleProperty(
@@ -939,7 +1013,7 @@ function useSandboxThemeDraft() {
 
   const cancelColorPreview = React.useCallback((_token: ColorToken) => {
     colorPreviewEpochRef.current += 1;
-    liveColorPreviewRef.current.clear();
+    liveColorPreviewRef.current?.clear();
 
     const restorePreviewStyle = () => {
       syncPreviewStyle(previewRef.current, previewStyleRef.current);
@@ -957,7 +1031,7 @@ function useSandboxThemeDraft() {
         return;
       }
 
-      liveColorPreviewRef.current.delete(token);
+      liveColorPreviewRef.current?.delete(token);
       colorPreviewEpochRef.current += 1;
 
       setDraft((current) => {
@@ -975,12 +1049,12 @@ function useSandboxThemeDraft() {
         };
       });
     },
-    [effectiveTheme, tokenValues]
+    [effectiveTheme, setDraft, tokenValues]
   );
 
   const resetColorToken = React.useCallback(
     (token: ColorToken) => {
-      liveColorPreviewRef.current.delete(token);
+      liveColorPreviewRef.current?.delete(token);
 
       setDraft((current) => {
         const { [token]: _removed, ...modeOverrides } =
@@ -1001,11 +1075,11 @@ function useSandboxThemeDraft() {
         tokenValues[token]
       );
     },
-    [effectiveTheme, tokenValues]
+    [effectiveTheme, setDraft, tokenValues]
   );
 
   const resetAllColorTokens = React.useCallback(() => {
-    liveColorPreviewRef.current.clear();
+    liveColorPreviewRef.current?.clear();
     colorPreviewEpochRef.current += 1;
 
     const nextDraft = createDefaultThemeDraft();
@@ -1023,7 +1097,7 @@ function useSandboxThemeDraft() {
 
     restorePreviewStyle();
     requestAnimationFrame(restorePreviewStyle);
-  }, [effectiveTheme, tokenValues]);
+  }, [effectiveTheme, setDraft, tokenValues]);
 
   return {
     areTokenValuesResolved,
@@ -1050,7 +1124,7 @@ const SandboxPortalPropsContext = React.createContext<
 >(undefined);
 
 function useSandboxPortalProps() {
-  return React.useContext(SandboxPortalPropsContext);
+  return React.use(SandboxPortalPropsContext);
 }
 
 const fruitItems: Fruit[] = [
@@ -1146,7 +1220,7 @@ function ThemeColorSkeleton({ label }: { label: string }) {
   return (
     <div className="grid gap-2" data-theme-color={label}>
       <Label className="text-xs leading-4">{label}</Label>
-      <Skeleton className="h-10 w-full rounded-[8px] sm:h-9" />
+      <Skeleton className="h-10 w-full rounded-lg sm:h-9" />
     </div>
   );
 }
@@ -1231,7 +1305,7 @@ function ThemeEditorControls({
   const themeRadiusInputId = React.useId();
   const themeSpacingValueId = React.useId();
   const themeSpacingInputId = React.useId();
-  const normalizeStoredRem = `function(v,d,min,max,decimals){var n=parseFloat(v);if(isNaN(n))return d;if(String(v).indexOf(".")===-1&&/^\\d+$/.test(String(v))&&n>=4)n=n/16;n=Math.min(max,Math.max(min,n));return n.toFixed(decimals)}`;
+  const normalizeStoredRem = `function normalizeStoredRem(v,d,min,max,decimals){var n=parseFloat(v);if(isNaN(n))return d;if(String(v).indexOf(".")===-1&&/^\\d+$/.test(String(v))&&n>=4)n=n/16;n=Math.min(max,Math.max(min,n));return n.toFixed(decimals)}`;
   const modeValueScript = `(()=>{try{var t=localStorage.getItem(${JSON.stringify(
     themeModeStorageKey
   )});var m=t==="dark"||t==="light"?t:matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";var labels=${JSON.stringify(themeModeLabels)};var el=document.getElementById(${JSON.stringify(
@@ -1272,7 +1346,7 @@ function ThemeEditorControls({
           items={themeModeItems}
         >
           <SelectTrigger id="theme-mode">
-            <SelectValue id={themeModeValueId} />
+            <SelectValue id={themeModeValueId} suppressHydrationWarning />
           </SelectTrigger>
           <SelectPopup>
             <SelectItem value="light">Light</SelectItem>
@@ -1293,7 +1367,7 @@ function ThemeEditorControls({
           items={themeFontItems}
         >
           <SelectTrigger id="theme-font">
-            <SelectValue id={themeFontValueId} />
+            <SelectValue id={themeFontValueId} suppressHydrationWarning />
           </SelectTrigger>
           <SelectPopup>
             {themeFontItems.map((item) => (
@@ -1442,9 +1516,13 @@ function ThemeEditorMobileBar(props: ThemeEditorProps) {
 function ThemeEditor(props: ThemeEditorProps) {
   return (
     <div className="sandbox-sidebar hidden lg:block">
-      <aside className="flex h-svh max-h-svh min-h-0 flex-col gap-5 overflow-x-hidden overflow-y-auto border-border border-e bg-card/72 p-5 backdrop-blur">
-        <ThemeEditorHeader />
-        <ThemeEditorControls {...props} />
+      <aside className="flex h-svh max-h-svh min-h-0 flex-col border-border border-e bg-card/72 backdrop-blur">
+        <ScrollArea scrollFade>
+          <div className="flex flex-col gap-5 p-5">
+            <ThemeEditorHeader />
+            <ThemeEditorControls {...props} />
+          </div>
+        </ScrollArea>
       </aside>
     </div>
   );
@@ -2085,7 +2163,7 @@ function DisclosureDemo() {
         <AccordionItem value="package">
           <AccordionTrigger>Package exports</AccordionTrigger>
           <AccordionPanel>
-            Components are path-exported for npm consumers.
+            Components are path-exported for bun consumers.
           </AccordionPanel>
         </AccordionItem>
       </Accordion>
@@ -2305,7 +2383,7 @@ function UtilityDemo() {
         <Button
           size="sm"
           variant="outline"
-          onClick={() => copyToClipboard("npm install @my-ui/ui")}
+          onClick={() => copyToClipboard("bun install @my-ui/ui")}
         >
           {isCopied ? <CheckIcon /> : <CopyIcon />}
           Copy install
@@ -2457,7 +2535,7 @@ export function Sandbox() {
                   </TabsPanel>
                   <TabsPanel value="code">
                     <p className="pt-3 font-mono text-muted-foreground text-sm">
-                      npm install @my-ui/ui
+                      bun install @my-ui/ui
                     </p>
                   </TabsPanel>
                 </Tabs>

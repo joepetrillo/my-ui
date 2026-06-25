@@ -16,6 +16,8 @@ import { cn } from "@my-ui/ui/lib/utils";
 import { SearchIcon } from "lucide-react";
 import type * as React from "react";
 
+const searchAddon = <SearchIcon />;
+
 export const CommandDialog: typeof CommandDialogPrimitive.Root =
   CommandDialogPrimitive.Root;
 
@@ -126,7 +128,7 @@ export function CommandInput({
         )}
         placeholder={placeholder}
         size="lg"
-        startAddon={<SearchIcon />}
+        startAddon={searchAddon}
         {...props}
       />
     </div>

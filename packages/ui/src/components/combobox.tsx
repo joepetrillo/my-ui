@@ -1,29 +1,24 @@
 "use client";
 
 import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
+import { ComboboxContext } from "@my-ui/ui/components/combobox-context";
 import { Input } from "@my-ui/ui/components/input";
 import { ScrollArea } from "@my-ui/ui/components/scroll-area";
 import { cn } from "@my-ui/ui/lib/utils";
 import { ChevronsUpDownIcon, XIcon } from "lucide-react";
 import * as React from "react";
 
-export const ComboboxContext: React.Context<{
-  chipsRef: React.RefObject<Element | null> | null;
-  multiple: boolean;
-}> = React.createContext<{
-  chipsRef: React.RefObject<Element | null> | null;
-  multiple: boolean;
-}>({
-  chipsRef: null,
-  multiple: false,
-});
-
 export function Combobox<Value, Multiple extends boolean | undefined = false>(
   props: ComboboxPrimitive.Root.Props<Value, Multiple>
 ): React.ReactElement {
   const chipsRef = React.useRef<Element | null>(null);
+  const multiple = !!props.multiple;
+  const contextValue = React.useMemo(
+    () => ({ chipsRef, multiple }),
+    [multiple]
+  );
   return (
-    <ComboboxContext.Provider value={{ chipsRef, multiple: !!props.multiple }}>
+    <ComboboxContext.Provider value={contextValue}>
       <ComboboxPrimitive.Root {...props} />
     </ComboboxContext.Provider>
   );

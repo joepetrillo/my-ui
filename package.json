@@ -8,17 +8,19 @@
   ],
   "type": "module",
   "scripts": {
-    "build": "npm run build:ui && npm run build:sandbox",
-    "build:sandbox": "npm run build -w @my-ui/sandbox",
-    "build:ui": "npm run build -w @my-ui/ui",
-    "dev": "npm run build:ui && npm run dev -w @my-ui/sandbox",
+    "build": "bun run build:ui && bun run build:sandbox",
+    "build:sandbox": "bun run --filter @my-ui/sandbox build",
+    "build:ui": "bun run --filter @my-ui/ui build",
+    "dev": "bun run --parallel dev:ui dev:sandbox",
+    "dev:sandbox": "bun run --cwd apps/sandbox dev",
+    "dev:ui": "bun run --cwd packages/ui dev",
     "format": "oxfmt . --write",
     "format:check": "oxfmt . --check",
     "lint": "oxlint .",
     "lint:fix": "oxlint . --fix",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "bun run --workspaces --if-present typecheck",
     "fix": "ultracite fix",
-    "check": "npm run check:api -w @my-ui/ui && ultracite check"
+    "check": "bun run --filter @my-ui/ui check:api && ultracite check"
   },
   "devDependencies": {
     "oxfmt": "^0.56.0",
@@ -27,5 +29,6 @@
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "ultracite": "^7.8.3"
-  }
+  },
+  "packageManager": "bun@1.3.14"
 }

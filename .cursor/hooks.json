@@ -2,7 +2,7 @@
   "hooks": {
     "afterFileEdit": [
       {
-        "command": "npm run fix"
+        "command": "bun run fix"
       }
     ]
   },
