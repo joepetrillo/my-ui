@@ -385,7 +385,7 @@ export const ThemeColorField = React.memo(
                   type="button"
                   variant="outline"
                 >
-                  Restore default
+                  Reset
                 </Button>
                 <Button
                   disabled={!canApply}
