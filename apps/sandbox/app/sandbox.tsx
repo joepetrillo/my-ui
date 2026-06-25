@@ -248,9 +248,9 @@ import { useTheme } from "next-themes";
 import * as React from "react";
 
 import {
-  normalizeHexColor,
+  normalizeOklchColor,
   parseThemeColorRgba,
-  resolveColorToHex,
+  resolveColorToOklch,
 } from "./theme-color";
 import { ThemeColorField } from "./theme-color-field";
 
@@ -412,36 +412,8 @@ const subscribeNoop = () => () => {
 };
 
 interface ThemeResolveState {
-  tokenValues: Record<ColorToken, string>;
-  areTokenValuesResolved: boolean;
-  isThemeResolved: boolean;
-}
-
-type ThemeResolveAction =
-  | { type: "resolve-start" }
-  | {
-      type: "resolve-complete";
-      tokenValues: Record<ColorToken, string>;
-      themeReady: boolean;
-    };
-
-function themeResolveReducer(
-  state: ThemeResolveState,
-  action: ThemeResolveAction
-): ThemeResolveState {
-  if (action.type === "resolve-start") {
-    if (!state.areTokenValuesResolved) {
-      return state;
-    }
-
-    return { ...state, areTokenValuesResolved: false };
-  }
-
-  return {
-    areTokenValuesResolved: true,
-    isThemeResolved: state.isThemeResolved || action.themeReady,
-    tokenValues: action.tokenValues,
-  };
+  tokenValuesByMode: Record<ResolvedThemeMode, Record<ColorToken, string>>;
+  isResolved: boolean;
 }
 
 function parseThemeRem(value: string) {
@@ -495,9 +467,12 @@ function parseStoredThemeRem(
 function createFallbackTokenValues(
   mode: ResolvedThemeMode
 ): Record<ColorToken, string> {
-  const background = mode === "dark" ? "#171715" : "#fbfaf7";
-  const foreground = mode === "dark" ? "#f2f0ea" : "#252521";
-  const card = mode === "dark" ? "#1d1c1a" : "#fffefd";
+  const background =
+    mode === "dark" ? "oklch(0.204 0.004 106.74)" : "oklch(0.985 0.004 91.446)";
+  const foreground =
+    mode === "dark" ? "oklch(0.955 0.008 91.484)" : "oklch(0.263 0.007 106.89)";
+  const card =
+    mode === "dark" ? "oklch(0.227 0.004 84.587)" : "oklch(0.998 0.002 67.803)";
   const values = Object.fromEntries(
     colorTokens.map((token) => [token, foreground])
   ) as Record<ColorToken, string>;
@@ -506,18 +481,29 @@ function createFallbackTokenValues(
   values.foreground = foreground;
   values.card = card;
   values["card-foreground"] = foreground;
-  values.popover = mode === "dark" ? "#20201d" : "#fffefd";
+  values.popover =
+    mode === "dark"
+      ? "oklch(0.242 0.006 106.809)"
+      : "oklch(0.998 0.002 67.803)";
   values["popover-foreground"] = foreground;
   values.primary = foreground;
   values["primary-foreground"] = card;
-  values.destructive = "#ef4444";
-  values["destructive-foreground"] = mode === "dark" ? "#f87171" : "#b91c1c";
-  values.info = "#3b82f6";
-  values["info-foreground"] = mode === "dark" ? "#60a5fa" : "#1d4ed8";
-  values.success = "#10b981";
-  values["success-foreground"] = mode === "dark" ? "#34d399" : "#047857";
-  values.warning = "#f59e0b";
-  values["warning-foreground"] = mode === "dark" ? "#fbbf24" : "#b45309";
+  values.destructive = "oklch(0.637 0.208 25.331)";
+  values["destructive-foreground"] =
+    mode === "dark" ? "oklch(0.711 0.166 22.216)" : "oklch(0.505 0.19 27.518)";
+  values.info = "oklch(0.623 0.188 259.815)";
+  values["info-foreground"] =
+    mode === "dark"
+      ? "oklch(0.714 0.143 254.624)"
+      : "oklch(0.488 0.217 264.376)";
+  values.success = "oklch(0.696 0.149 162.48)";
+  values["success-foreground"] =
+    mode === "dark"
+      ? "oklch(0.773 0.153 163.223)"
+      : "oklch(0.508 0.105 165.612)";
+  values.warning = "oklch(0.769 0.165 70.08)";
+  values["warning-foreground"] =
+    mode === "dark" ? "oklch(0.837 0.164 84.429)" : "oklch(0.555 0.146 48.998)";
 
   return values;
 }
@@ -572,7 +558,7 @@ function readStoredColorOverrides(value: unknown): ThemeColorOverrides {
     }
 
     for (const token of colorTokens) {
-      const color = normalizeHexColor(modeValue[token]);
+      const color = normalizeOklchColor(modeValue[token]);
 
       if (color) {
         colorOverrides[mode][token] = color;
@@ -587,12 +573,30 @@ function applyLegacyColorOverrides(
   storedValue: Record<string, unknown>,
   colorOverrides: ThemeColorOverrides
 ) {
+  // Legacy drafts stored these as hex; `normalizeOklchColor` migrates the stored
+  // value to oklch, so the defaults are compared in oklch too.
   const legacyTokenDefaults = [
-    { defaultValue: "#fbfaf7", key: "background", token: "background" },
-    { defaultValue: "#252521", key: "foreground", token: "foreground" },
-    { defaultValue: "#fffefd", key: "card", token: "card" },
-    { defaultValue: "#252521", key: "primary", token: "primary" },
-    { defaultValue: "#d8d3c9", key: "border", token: "border" },
+    {
+      defaultValue: "oklch(0.985 0.004 91.446)",
+      key: "background",
+      token: "background",
+    },
+    {
+      defaultValue: "oklch(0.263 0.007 106.89)",
+      key: "foreground",
+      token: "foreground",
+    },
+    { defaultValue: "oklch(0.998 0.002 67.803)", key: "card", token: "card" },
+    {
+      defaultValue: "oklch(0.263 0.007 106.89)",
+      key: "primary",
+      token: "primary",
+    },
+    {
+      defaultValue: "oklch(0.868 0.015 84.586)",
+      key: "border",
+      token: "border",
+    },
   ] as const satisfies readonly {
     defaultValue: string;
     key: string;
@@ -601,7 +605,7 @@ function applyLegacyColorOverrides(
   const legacyOverrides: Partial<Record<ColorToken, string>> = {};
 
   for (const { defaultValue, key, token } of legacyTokenDefaults) {
-    const color = normalizeHexColor(storedValue[key]);
+    const color = normalizeOklchColor(storedValue[key]);
 
     if (color && color !== defaultValue) {
       legacyOverrides[token] = color;
@@ -733,10 +737,24 @@ function resolveTokenColor(probe: HTMLElement, token: ColorToken) {
 }
 
 function readResolvedTokenValues(
+  mode: ResolvedThemeMode,
   fallbackValues: Record<ColorToken, string>
 ): Record<ColorToken, string> {
   if (!document.body) {
     return fallbackValues;
+  }
+
+  // The theme is selected by a plain `.dark` class, so we can read either
+  // mode's values regardless of which one is active by briefly forcing the
+  // class on the root, probing, then restoring it. This all happens inside a
+  // single synchronous task, so the browser never paints the forced state.
+  const root = document.documentElement;
+  const wasDark = root.classList.contains("dark");
+  const wantDark = mode === "dark";
+  const restoreClass = wantDark !== wasDark;
+
+  if (restoreClass) {
+    root.classList.toggle("dark", wantDark);
   }
 
   const probe = document.createElement("div");
@@ -752,16 +770,20 @@ function readResolvedTokenValues(
   const values = { ...fallbackValues };
 
   for (const token of colorTokens) {
-    const hex = backgroundColor
-      ? resolveColorToHex(resolveTokenColor(probe, token), backgroundColor)
+    const resolved = backgroundColor
+      ? resolveColorToOklch(resolveTokenColor(probe, token), backgroundColor)
       : null;
 
-    if (hex) {
-      values[token] = hex;
+    if (resolved) {
+      values[token] = resolved;
     }
   }
 
   probe.remove();
+
+  if (restoreClass) {
+    root.classList.toggle("dark", wasDark);
+  }
 
   return values;
 }
@@ -794,6 +816,11 @@ function createPreviewStyle(
     style["--spacing"] = `${draft.spacing}rem`;
   }
 
+  // Pin every token to its resolved (flattened) value, not the raw theme
+  // variable. Several defaults — secondary, muted, accent, border, input — are
+  // semi-transparent `color-mix(... transparent)` tints that composite over the
+  // background. If they were left to inherit, overriding the background would
+  // bleed through them. The flattened solid values keep each token independent.
   for (const token of colorTokens) {
     style[cssVariableName(token)] =
       modeColorOverrides[token] ?? tokenValues[token];
@@ -909,46 +936,45 @@ function useSandboxThemeDraft() {
     () => true,
     () => false
   );
-  const [resolveState, dispatchResolve] = React.useReducer(
-    themeResolveReducer,
-    {
-      areTokenValuesResolved: false,
-      isThemeResolved: false,
-      tokenValues: fallbackTokenValues.light,
-    }
+  const [resolveState, setResolveState] = React.useState<ThemeResolveState>(
+    () => ({
+      isResolved: false,
+      tokenValuesByMode: fallbackTokenValues,
+    })
   );
-  const { tokenValues, areTokenValuesResolved, isThemeResolved } = resolveState;
+  const { tokenValuesByMode, isResolved } = resolveState;
+  const areTokenValuesResolved = isResolved;
+  const isThemeResolved = isResolved;
   const previewRef = React.useRef<HTMLElement>(null);
-  const liveColorPreviewRef = React.useRef<Map<ColorToken, string> | null>(
-    null
-  );
-  liveColorPreviewRef.current ??= new Map<ColorToken, string>();
-  const colorPreviewEpochRef = React.useRef(0);
   const selectedTheme = isResolvedThemeMode(resolvedTheme)
     ? resolvedTheme
     : "light";
   const effectiveTheme =
     isMounted && isResolvedThemeMode(resolvedTheme) ? resolvedTheme : "light";
+  const tokenValues = tokenValuesByMode[effectiveTheme];
 
   React.useEffect(() => {
     clearLegacyDocumentThemeStyles();
   }, []);
 
+  // The flattened token values are static per mode (the theme CSS never changes
+  // at runtime), so both modes are resolved once on mount and cached. Switching
+  // themes then needs no probe — the target mode's values are already in state,
+  // so the preview repaints in lockstep with the sidebar instead of a frame
+  // behind it.
   React.useEffect(() => {
-    dispatchResolve({ type: "resolve-start" });
+    if (!isMounted) {
+      return;
+    }
 
-    const frame = window.requestAnimationFrame(() => {
-      dispatchResolve({
-        themeReady: isMounted && isResolvedThemeMode(resolvedTheme),
-        tokenValues: readResolvedTokenValues(
-          fallbackTokenValues[effectiveTheme]
-        ),
-        type: "resolve-complete",
-      });
+    setResolveState({
+      isResolved: true,
+      tokenValuesByMode: {
+        dark: readResolvedTokenValues("dark", fallbackTokenValues.dark),
+        light: readResolvedTokenValues("light", fallbackTokenValues.light),
+      },
     });
-
-    return () => window.cancelAnimationFrame(frame);
-  }, [effectiveTheme, isMounted, resolvedTheme]);
+  }, [isMounted]);
 
   const previewStyle = React.useMemo(
     () => createPreviewStyle(draft, effectiveTheme, tokenValues),
@@ -975,46 +1001,35 @@ function useSandboxThemeDraft() {
     [setDraft]
   );
 
+  // Live preview writes the token's CSS variable straight to the DOM. The child
+  // color field throttles these through requestAnimationFrame and is the single
+  // source of truth for cancelling stale previews, so no extra guard is needed
+  // here.
   const previewColor = React.useCallback(
     (token: ColorToken, value: string) => {
-      const previewEpoch = colorPreviewEpochRef.current;
-      const nextColor = normalizeHexColor(value);
+      const nextColor = normalizeOklchColor(value);
 
       if (!nextColor) {
         return;
       }
 
-      const property = cssVariableName(token);
       const overrideColor =
         nextColor === tokenValues[token] ? undefined : nextColor;
 
-      const applyPreview = () => {
-        if (previewEpoch !== colorPreviewEpochRef.current) {
-          return;
-        }
-
-        if (overrideColor) {
-          liveColorPreviewRef.current?.set(token, overrideColor);
-        } else {
-          liveColorPreviewRef.current?.delete(token);
-        }
-
-        setPreviewStyleProperty(
-          previewRef.current,
-          property,
-          overrideColor ?? tokenValues[token]
-        );
-      };
-
-      applyPreview();
+      setPreviewStyleProperty(
+        previewRef.current,
+        cssVariableName(token),
+        overrideColor ?? tokenValues[token]
+      );
     },
     [tokenValues]
   );
 
-  const cancelColorPreview = React.useCallback((_token: ColorToken) => {
-    colorPreviewEpochRef.current += 1;
-    liveColorPreviewRef.current?.clear();
-
+  // Drop any in-flight preview overrides by re-applying the committed style.
+  // The committed style is owned by React and never changes on cancel, so this
+  // restores the original token. It runs now and again on the next frame to
+  // clobber a preview write that may land in the same tick the popover closes.
+  const cancelColorPreview = React.useCallback(() => {
     const restorePreviewStyle = () => {
       syncPreviewStyle(previewRef.current, previewStyleRef.current);
     };
@@ -1025,14 +1040,11 @@ function useSandboxThemeDraft() {
 
   const commitColor = React.useCallback(
     (token: ColorToken, value: string) => {
-      const nextColor = normalizeHexColor(value);
+      const nextColor = normalizeOklchColor(value);
 
       if (!nextColor) {
         return;
       }
-
-      liveColorPreviewRef.current?.delete(token);
-      colorPreviewEpochRef.current += 1;
 
       setDraft((current) => {
         const modeOverrides = {
@@ -1054,8 +1066,6 @@ function useSandboxThemeDraft() {
 
   const resetColorToken = React.useCallback(
     (token: ColorToken) => {
-      liveColorPreviewRef.current?.delete(token);
-
       setDraft((current) => {
         const { [token]: _removed, ...modeOverrides } =
           current.colorOverrides[effectiveTheme];
@@ -1079,9 +1089,6 @@ function useSandboxThemeDraft() {
   );
 
   const resetAllColorTokens = React.useCallback(() => {
-    liveColorPreviewRef.current?.clear();
-    colorPreviewEpochRef.current += 1;
-
     const nextDraft = createDefaultThemeDraft();
     const nextPreviewStyle = createPreviewStyle(
       nextDraft,
@@ -1559,7 +1566,7 @@ function ThemeColorSwatch({
         render={
           <span
             aria-label={label}
-            className="inline-block size-10 shrink-0 rounded-sm border border-black"
+            className="inline-block size-10 shrink-0 rounded-sm border border-border"
             role="img"
             style={{ backgroundColor: `var(${cssVariableName(token)})` }}
           />

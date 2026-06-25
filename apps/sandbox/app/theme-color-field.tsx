@@ -2,64 +2,156 @@
 
 import {
   Button,
-  Input,
   Label,
   Popover,
   PopoverPopup,
   PopoverTitle,
   PopoverTrigger,
+  SliderPrimitive,
 } from "@my-ui/ui";
 import { cn } from "@my-ui/ui/lib/utils";
-import dynamic from "next/dynamic";
 import * as React from "react";
 
 import {
+  clampOklchToGamut,
   getThemeColorSwatch,
-  isValidHexColor,
-  resolvePickerHex,
+  isValidOklchColor,
+  OKLCH_MAX_CHROMA,
+  oklchToCss,
+  resolvePickerOklch,
 } from "./theme-color";
+import type { OklchColor } from "./theme-color";
 
-const hexDigitPattern = /[^\da-f]/giu;
+const hueGradientStops = [0, 60, 120, 180, 240, 300, 360];
+const sliderTrackStops = [0, 0.25, 0.5, 0.75, 1];
 
-function normalizeHexInput(raw: string) {
-  const digits = raw
-    .replace(/^#/u, "")
-    .replaceAll(hexDigitPattern, "")
-    .slice(0, 6)
-    .toLowerCase();
+function oklchGradient(stops: OklchColor[]) {
+  const segments = stops
+    .map((stop) => oklchToCss(clampOklchToGamut(stop)))
+    .join(", ");
 
-  return `#${digits}`;
+  return `linear-gradient(to right, ${segments})`;
 }
 
-// react-colorful drives its drag with window-level mouse listeners and never
-// captures the pointer, so releasing a drag outside the popup lands a
-// synthesized `click` on an ancestor element. Base UI's popover reads that as
-// an outside press and closes — losing the in-progress color. Capturing the
-// pointer to the slider keeps every move/up/click targeted inside the popup,
-// so the drag stays self-contained no matter where the cursor is released.
-function capturePickerPointer(event: React.PointerEvent<HTMLDivElement>) {
-  const interactive = (event.target as HTMLElement).closest<HTMLElement>(
-    ".react-colorful__interactive"
+function handleInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+  if (event.key === "Enter") {
+    event.currentTarget.blur();
+  }
+}
+
+function formatChannel(value: number, max: number) {
+  if (max === 360) {
+    return Math.round(value).toString();
+  }
+
+  return value.toFixed(3);
+}
+
+function OklchSlider({
+  background,
+  label,
+  max,
+  onChange,
+  step,
+  value,
+}: {
+  background: string;
+  label: string;
+  max: number;
+  onChange: (value: number) => void;
+  step: number;
+  value: number;
+}) {
+  const id = React.useId();
+
+  return (
+    <div className="grid gap-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <Label className="text-muted-foreground text-xs" htmlFor={id}>
+          {label}
+        </Label>
+        <span className="font-mono text-muted-foreground text-xs tabular-nums">
+          {formatChannel(value, max)}
+        </span>
+      </div>
+      <SliderPrimitive.Root
+        aria-label={label}
+        id={id}
+        max={max}
+        min={0}
+        onValueChange={(next) =>
+          onChange(Array.isArray(next) ? (next[0] ?? 0) : next)
+        }
+        step={step}
+        thumbAlignment="edge"
+        value={value}
+      >
+        <SliderPrimitive.Control className="flex h-4 w-full touch-none select-none items-center">
+          <SliderPrimitive.Track
+            className="relative h-3 w-full rounded-full shadow-[inset_0_0_0_1px_var(--border)]"
+            style={{ background }}
+          >
+            <SliderPrimitive.Thumb className="size-4 rounded-full border-2 border-foreground bg-background shadow-xs/25 outline-none transition-[scale] has-focus-visible:ring-[3px] has-focus-visible:ring-ring/24 data-dragging:scale-110" />
+          </SliderPrimitive.Track>
+        </SliderPrimitive.Control>
+      </SliderPrimitive.Root>
+    </div>
+  );
+}
+
+function OklchColorPicker({
+  color,
+  onChange,
+}: {
+  color: OklchColor;
+  onChange: (next: OklchColor) => void;
+}) {
+  const { c, h, l } = color;
+
+  const lightnessGradient = oklchGradient(
+    sliderTrackStops.map((stop) => ({ c, h, l: stop }))
+  );
+  const chromaGradient = oklchGradient(
+    sliderTrackStops.map((stop) => ({ c: stop * OKLCH_MAX_CHROMA, h, l }))
+  );
+  const hueGradient = oklchGradient(
+    hueGradientStops.map((hue) => ({ c: Math.max(c, 0.14), h: hue, l: 0.72 }))
   );
 
-  interactive?.setPointerCapture(event.pointerId);
-}
-
-const HexColorPicker = dynamic(
-  async () => {
-    const mod = await import("react-colorful");
-    return mod.HexColorPicker;
-  },
-  {
-    loading: () => (
+  return (
+    <div className="grid gap-3">
       <div
         aria-hidden="true"
-        className="h-[140px] w-full animate-pulse rounded-md bg-muted"
+        className="h-12 w-full rounded-lg border border-border"
+        style={{ backgroundColor: oklchToCss(color) }}
       />
-    ),
-    ssr: false,
-  }
-);
+      <OklchSlider
+        background={lightnessGradient}
+        label="Lightness"
+        max={1}
+        onChange={(next) => onChange({ ...color, l: next })}
+        step={0.001}
+        value={l}
+      />
+      <OklchSlider
+        background={chromaGradient}
+        label="Chroma"
+        max={OKLCH_MAX_CHROMA}
+        onChange={(next) => onChange({ ...color, c: next })}
+        step={0.001}
+        value={c}
+      />
+      <OklchSlider
+        background={hueGradient}
+        label="Hue"
+        max={360}
+        onChange={(next) => onChange({ ...color, h: next })}
+        step={0.5}
+        value={h}
+      />
+    </div>
+  );
+}
 
 export const ThemeColorField = React.memo(
   ({
@@ -81,14 +173,12 @@ export const ThemeColorField = React.memo(
     onReset: () => void;
     value: string;
   }) => {
-    const triggerId = React.useId();
-    const colorInputId = React.useId();
+    const inputId = React.useId();
     const [open, setOpen] = React.useState(false);
-    // While the popover is open the user edits a local draft; when it is
-    // closed there is no draft and the live `value` prop is shown directly.
+    // The text box and the popover share one editable draft; when there is no
+    // draft the live `value` prop is shown directly.
     const [draft, setDraft] = React.useState<string | null>(null);
     const localValue = draft ?? value;
-    const committedValueRef = React.useRef(value);
     const previewFrameRef = React.useRef<number | null>(null);
     const pendingPreviewRef = React.useRef<string | null>(null);
     const previewSessionRef = React.useRef(0);
@@ -121,7 +211,7 @@ export const ThemeColorField = React.memo(
       const pending = pendingPreviewRef.current;
       pendingPreviewRef.current = null;
 
-      if (pending && isValidHexColor(pending)) {
+      if (pending && isValidOklchColor(pending)) {
         onPreview(pending);
       }
     }
@@ -146,40 +236,72 @@ export const ThemeColorField = React.memo(
         const pending = pendingPreviewRef.current;
         pendingPreviewRef.current = null;
 
-        if (pending && isValidHexColor(pending)) {
+        if (pending && isValidOklchColor(pending)) {
           onPreview(pending);
         }
       });
     }
 
-    function handlePickerChange(nextValue: string) {
-      const normalized = nextValue.toLowerCase();
-      setDraft(normalized);
-      schedulePreview(normalized);
+    function handlePickerChange(nextColor: OklchColor) {
+      // Author the value the user dragged to verbatim — only lightness/chroma/hue
+      // ranges bound it. Gamut clamping happens for display (gradients, swatch)
+      // but must never snap the slider back, or chroma can't pass the gamut edge.
+      const css = oklchToCss(nextColor);
+      setDraft(css);
+      schedulePreview(css);
     }
 
-    function handleColorInputChange(nextValue: string) {
-      const lower = normalizeHexInput(nextValue);
-      setDraft(lower);
+    function handleInputChange(nextValue: string) {
+      setDraft(nextValue);
 
-      if (isValidHexColor(lower)) {
-        schedulePreview(lower);
+      if (isValidOklchColor(nextValue.trim())) {
+        schedulePreview(nextValue.trim());
       }
     }
 
-    function commitAndClose() {
-      const nextColor = localValue.trim();
+    function commitValue(rawValue: string) {
+      const nextColor = rawValue.trim();
 
-      if (!isValidHexColor(nextColor)) {
-        return;
+      if (!isValidOklchColor(nextColor)) {
+        return false;
       }
 
       flushPreview();
       previewSessionRef.current += 1;
-      closeIntentRef.current = "apply";
       onCommit(nextColor);
-      committedValueRef.current = nextColor;
-      setDraft(nextColor);
+      // Drop the draft so the field tracks the freshly committed `value` again;
+      // this state update batches with `onCommit`, so there is no stale frame.
+      setDraft(null);
+      return true;
+    }
+
+    function handleInputBlur() {
+      // The popover owns its own apply/cancel lifecycle while it is open.
+      if (open) {
+        return;
+      }
+
+      const next = localValue.trim();
+
+      if (isValidOklchColor(next)) {
+        if (next !== value.trim()) {
+          commitValue(next);
+        }
+        return;
+      }
+
+      // Discard an invalid manual entry and restore the committed value.
+      clearPendingPreview();
+      onCancelPreview();
+      setDraft(null);
+    }
+
+    function commitAndClose() {
+      if (!commitValue(localValue)) {
+        return;
+      }
+
+      closeIntentRef.current = "apply";
       setOpen(false);
     }
 
@@ -187,14 +309,13 @@ export const ThemeColorField = React.memo(
       previewSessionRef.current += 1;
       clearPendingPreview();
       onCancelPreview();
-      setDraft(committedValueRef.current);
+      setDraft(null);
     }
 
     function handleOpenChange(nextOpen: boolean) {
       if (nextOpen) {
         previewSessionRef.current += 1;
         setDraft(value);
-        committedValueRef.current = value;
         setOpen(true);
         return;
       }
@@ -211,93 +332,61 @@ export const ThemeColorField = React.memo(
       setOpen(false);
     }
 
-    const pickerColor = resolvePickerHex(localValue, value);
-    const canApply = isValidHexColor(localValue);
-    const triggerDisplayValue = open ? localValue : value;
-    const triggerSwatchColor = open
-      ? getThemeColorSwatch(localValue, value)
-      : getThemeColorSwatch(value, value);
-    const hasPendingChange =
-      open && canApply && localValue.trim() !== value.trim();
-
     function handleRestoreDefault() {
-      if (previewFrameRef.current !== null) {
-        cancelAnimationFrame(previewFrameRef.current);
-        previewFrameRef.current = null;
-      }
-
-      pendingPreviewRef.current = null;
-      setDraft(defaultValue);
-      committedValueRef.current = defaultValue;
+      clearPendingPreview();
       onPreview(defaultValue);
       closeIntentRef.current = "reset";
       onReset();
+      // `onReset` makes `value` resolve back to the default, so clearing the
+      // draft lets the field follow it (both updates batch together).
+      setDraft(null);
       previewSessionRef.current += 1;
       setOpen(false);
     }
 
+    const pickerColor = resolvePickerOklch(localValue, value);
+    const canApply = isValidOklchColor(localValue.trim());
+    const swatchColor = getThemeColorSwatch(localValue, value);
+
     return (
       <div className="grid gap-2" data-theme-color={label}>
-        <Label className="text-xs leading-4" htmlFor={triggerId}>
+        <Label className="text-xs leading-4" htmlFor={inputId}>
           {label}
         </Label>
-        <Popover onOpenChange={handleOpenChange} open={open}>
-          <PopoverTrigger
-            aria-label={`${label}, ${triggerDisplayValue}`}
-            className={cn(
-              "flex h-10 w-full cursor-pointer items-center gap-2.5 rounded-lg border border-input bg-background px-2.5 shadow-xs/5 outline-none transition-[box-shadow,background-color,border-color] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/24 sm:h-9",
-              isModified && "border-foreground/18 bg-muted/35",
-              hasPendingChange && "border-foreground/18 bg-muted/35"
-            )}
-            id={triggerId}
-          >
-            <span
-              aria-hidden="true"
+        <div
+          className={cn(
+            "flex h-10 w-full items-center gap-2.5 rounded-lg border border-input bg-background px-2.5 shadow-xs/5 transition-[box-shadow,background-color,border-color] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/24 sm:h-9",
+            isModified && "border-foreground/18 bg-muted/35"
+          )}
+        >
+          <Popover onOpenChange={handleOpenChange} open={open}>
+            <PopoverTrigger
+              aria-label={`Edit ${label} color`}
               className={cn(
-                "size-6 shrink-0 rounded-[6px] border border-border transition-colors sm:size-5",
+                "size-6 shrink-0 cursor-pointer rounded-[6px] border border-border outline-none transition-[box-shadow,scale] focus-visible:ring-[3px] focus-visible:ring-ring/24 sm:size-5",
                 isModified &&
                   "ring-2 ring-foreground/12 ring-offset-1 ring-offset-background"
               )}
-              style={{ backgroundColor: triggerSwatchColor }}
+              style={{ backgroundColor: swatchColor }}
             />
-            <span className="truncate font-mono text-muted-foreground text-xs">
-              {triggerDisplayValue}
-            </span>
-          </PopoverTrigger>
-          <PopoverPopup
-            align="start"
-            className="w-[min(16rem,calc(100vw-2rem))] gap-0"
-          >
-            <PopoverTitle className="sr-only">{label}</PopoverTitle>
-            <div onPointerDownCapture={capturePickerPointer}>
-              <HexColorPicker
-                aria-label={`${label} color picker`}
-                className="theme-color-picker w-full!"
+            <PopoverPopup
+              align="start"
+              className="w-[min(17rem,calc(100vw-2rem))] gap-0"
+            >
+              <PopoverTitle className="sr-only">{label}</PopoverTitle>
+              <OklchColorPicker
                 color={pickerColor}
                 onChange={handlePickerChange}
               />
-            </div>
-            <div className="grid gap-2 pt-3">
-              <Label className="sr-only" htmlFor={colorInputId}>
-                Color
-              </Label>
-              <div className="grid grid-cols-2 gap-2">
-                <Input
-                  aria-label="Hex color value"
-                  autoCapitalize="off"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  className="min-w-0 font-mono"
-                  id={colorInputId}
-                  maxLength={7}
-                  nativeInput
-                  onChange={(event) =>
-                    handleColorInputChange(event.target.value)
-                  }
-                  placeholder="#ffffff"
-                  spellCheck={false}
-                  value={localValue}
-                />
+              <div className="grid grid-cols-2 gap-2 pt-3">
+                <Button
+                  className="text-muted-foreground"
+                  onClick={handleRestoreDefault}
+                  type="button"
+                  variant="outline"
+                >
+                  Restore default
+                </Button>
                 <Button
                   disabled={!canApply}
                   onClick={commitAndClose}
@@ -306,17 +395,24 @@ export const ThemeColorField = React.memo(
                   Apply
                 </Button>
               </div>
-              <Button
-                className="text-muted-foreground"
-                onClick={handleRestoreDefault}
-                type="button"
-                variant="outline"
-              >
-                Restore default
-              </Button>
-            </div>
-          </PopoverPopup>
-        </Popover>
+            </PopoverPopup>
+          </Popover>
+          <input
+            aria-label={`${label} oklch value`}
+            autoCapitalize="off"
+            autoComplete="off"
+            autoCorrect="off"
+            className="min-w-0 flex-1 bg-transparent font-mono text-muted-foreground text-xs outline-none"
+            id={inputId}
+            onBlur={handleInputBlur}
+            onChange={(event) => handleInputChange(event.target.value)}
+            onKeyDown={handleInputKeyDown}
+            placeholder="oklch(0.7 0.1 250)"
+            spellCheck={false}
+            type="text"
+            value={localValue}
+          />
+        </div>
       </div>
     );
   }
