@@ -1167,7 +1167,9 @@ const commandGroups: CommandGroupData[] = [
 
 function InlineScript({ html }: { html: string }) {
   return (
+    // react-doctor-disable-next-line react-doctor/nextjs-no-native-script -- no-flash theme bootstrap; must run synchronously before hydration
     <script
+      // react-doctor-disable-next-line react-doctor/dangerous-html-sink -- developer-authored inline JS from compile-time constants, not user input
       dangerouslySetInnerHTML={{ __html: html }}
       suppressHydrationWarning
       type={typeof window === "undefined" ? "text/javascript" : "text/plain"}
@@ -1567,6 +1569,7 @@ function ThemeColorSwatch({
           <span
             aria-label={label}
             className="inline-block size-10 shrink-0 rounded-sm border border-border"
+            // oxlint-disable-next-line react-doctor/prefer-tag-over-role
             role="img"
             style={{ backgroundColor: `var(${cssVariableName(token)})` }}
           />

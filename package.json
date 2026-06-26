@@ -8,23 +8,24 @@
   ],
   "type": "module",
   "scripts": {
-    "build": "bun run build:ui && bun run build:sandbox",
+    "build": "bun run --filter @my-ui/sandbox build",
     "build:sandbox": "bun run --filter @my-ui/sandbox build",
     "build:ui": "bun run --filter @my-ui/ui build",
     "dev": "bun run --parallel dev:ui dev:sandbox",
-    "dev:sandbox": "bun run --cwd apps/sandbox dev",
-    "dev:ui": "bun run --cwd packages/ui dev",
+    "dev:sandbox": "bun run --filter @my-ui/sandbox dev",
+    "dev:ui": "bun run --filter @my-ui/ui dev",
     "format": "oxfmt . --write",
     "format:check": "oxfmt . --check",
     "lint": "oxlint .",
     "lint:fix": "oxlint . --fix",
     "typecheck": "bun run --workspaces --if-present typecheck",
     "fix": "ultracite fix",
-    "check": "bun run --filter @my-ui/ui check:api && ultracite check"
+    "check": "bun run --filter @my-ui/ui check:api && ultracite check && react-doctor --yes --no-score --blocking warning"
   },
   "devDependencies": {
     "oxfmt": "^0.56.0",
     "oxlint": "^1.71.0",
+    "react-doctor": "^0.5.8",
     "tsup": "^8.5.1",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",

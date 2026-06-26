@@ -1,5 +1,10 @@
 "use client";
 
+// Slider thumbs are positional controls keyed by their `index` (Base UI
+// requires the `index` prop on each thumb). The thumb list never
+// reorders or filters, so the array index is the correct stable key —
+// the documented false-positive case for this rule.
+
 import { Slider as SliderPrimitive } from "@base-ui/react/slider";
 import { cn } from "@my-ui/ui/lib/utils";
 import * as React from "react";
@@ -51,6 +56,7 @@ export function Slider({
               className="block size-5 shrink-0 select-none overflow-hidden rounded-full border border-input bg-white not-dark:bg-clip-padding shadow-xs/5 outline-none transition-[box-shadow,scale] has-focus-visible:ring-[3px] has-focus-visible:ring-ring/24 data-dragging:scale-120 sm:size-4 dark:border-background dark:has-focus-visible:ring-ring/48 [:has(*:focus-visible),[data-dragging]]:shadow-none"
               data-slot="slider-thumb"
               index={index}
+              // react-doctor-disable-next-line react-doctor/no-array-index-as-key -- positional thumb; list never reorders or filters
               key={String(index)}
             />
           ))}

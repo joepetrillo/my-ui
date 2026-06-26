@@ -27,7 +27,7 @@ The package uses CSS variables for color, radius, spacing, font, and motion. Def
 ## Build And Publish
 
 ```bash
-bun run --filter @my-ui/ui build
+bun run build:ui
 cd packages/ui && bun publish
 ```
 

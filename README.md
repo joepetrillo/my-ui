@@ -15,7 +15,7 @@ From the repo root:
 ```bash
 bun install
 bun run dev        # UI watch build + sandbox at http://localhost:3000
-bun run build      # build UI, then sandbox
+bun run build      # build sandbox (UI builds first via prebuild)
 bun run check      # API drift + Ultracite lint/format
 bun run typecheck  # TypeScript across workspaces
 ```

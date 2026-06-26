@@ -11,7 +11,7 @@ export default defineConfig({
     "src/lib/*.ts",
     "src/base-ui/*.ts",
   ],
-  external: ["@my-ui/ui", /^@my-ui\/ui\//],
+  external: ["@my-ui/ui", /^@my-ui\/ui\//u],
   format: ["esm"],
   sourcemap: true,
 });
