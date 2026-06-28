@@ -12,7 +12,7 @@
     "esModuleInterop": true,
     // Catch import path casing mismatches before they break on Linux CI.
     "forceConsistentCasingInFileNames": true,
-    // Require each file to type-check alone; needed for tsup, Next, and other transpilers.
+    // Require each file to type-check alone; needed for tsdown, Next, and other transpilers.
     "isolatedModules": true,
     // React 17+ JSX transform — no `import React` required in components.
     "jsx": "react-jsx",
@@ -22,7 +22,7 @@
     "module": "ESNext",
     // Treat every file as a module; avoids accidental global scope and implicit scripts.
     "moduleDetection": "force",
-    // Resolve imports the way Vite, tsup, and Next do (package.json exports, etc.).
+    // Resolve imports the way Vite, tsdown, and Next do (package.json exports, etc.).
     "moduleResolution": "Bundler",
     // Base config only type-checks; each workspace opts into its own emit settings.
     "noEmit": true,

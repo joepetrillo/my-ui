@@ -2,13 +2,11 @@
   // Shared strict defaults from the monorepo root.
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    // Resolve `paths` relative to this package, not the repo root.
-    "baseUrl": ".",
-    // Align with tsup `--dts` so published types match what tsc expects.
+    // Align with tsdown `--dts` so published types match what tsc expects.
     "declaration": true,
-    // When emitting, produce JS + declarations (tsup handles real builds).
+    // When emitting, produce JS + declarations (tsdown handles real builds).
     "emitDeclarationOnly": false,
-    // `tsc` only type-checks here; tsup writes `dist/`.
+    // `tsc` only type-checks here; tsdown writes `dist/`.
     "noEmit": true,
     // Mirror package exports for in-repo imports like `@my-ui/ui/components/button`.
     "paths": {

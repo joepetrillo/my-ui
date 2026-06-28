@@ -4,8 +4,6 @@
   "compilerOptions": {
     // Next config and tooling may include `.js` files; base config disallows them.
     "allowJs": true,
-    // Resolve `paths` relative to the app root for `@/` imports.
-    "baseUrl": ".",
     // Reuse `.tsbuildinfo` between runs for faster local and CI typecheck.
     "incremental": true,
     // Leave JSX syntax for Next/SWC — overrides base `react-jsx`.

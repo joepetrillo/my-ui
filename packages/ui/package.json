@@ -343,8 +343,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "bun run generate:api && tsup",
-    "dev": "bun run generate:api && tsup --watch --silent --no-clean",
+    "build": "bun run generate:api && tsdown",
+    "dev": "bun run generate:api && tsdown --watch --silent --no-clean",
     "check:api": "tsx scripts/generate-public-api.ts --check",
     "clean": "rm -rf dist *.tsbuildinfo",
     "generate:api": "tsx scripts/generate-public-api.ts",

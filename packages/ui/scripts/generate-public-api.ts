@@ -18,6 +18,9 @@ interface PackageExportTarget {
 
 type PackageExports = Record<string, PackageExportTarget | string>;
 
+const distJsExtension = ".js";
+const distTypesExtension = ".d.ts";
+
 const scriptDir = import.meta.dirname;
 const packageRoot = path.resolve(scriptDir, "..");
 const srcDir = path.join(packageRoot, "src");
@@ -205,16 +208,16 @@ function packageTargetForSource(
   const distPath = source.replace("./", "./dist/");
 
   return {
-    import: `${distPath}.js`,
-    types: `${distPath}.d.ts`,
+    import: `${distPath}${distJsExtension}`,
+    types: `${distPath}${distTypesExtension}`,
   };
 }
 
 function buildPackageExports(): PackageExports {
   const exportsMap: PackageExports = {
     ".": {
-      import: "./dist/index.js",
-      types: "./dist/index.d.ts",
+      import: `./dist/index${distJsExtension}`,
+      types: `./dist/index${distTypesExtension}`,
     },
   };
 
@@ -227,21 +230,21 @@ function buildPackageExports(): PackageExports {
   return {
     ...exportsMap,
     "./base-ui/*": {
-      import: "./dist/base-ui/*.js",
-      types: "./dist/base-ui/*.d.ts",
+      import: `./dist/base-ui/*${distJsExtension}`,
+      types: `./dist/base-ui/*${distTypesExtension}`,
     },
     "./components/*": {
-      import: "./dist/components/*.js",
-      types: "./dist/components/*.d.ts",
+      import: `./dist/components/*${distJsExtension}`,
+      types: `./dist/components/*${distTypesExtension}`,
     },
     "./globals.css": "./src/styles/globals.css",
     "./hooks/*": {
-      import: "./dist/hooks/*.js",
-      types: "./dist/hooks/*.d.ts",
+      import: `./dist/hooks/*${distJsExtension}`,
+      types: `./dist/hooks/*${distTypesExtension}`,
     },
     "./lib/*": {
-      import: "./dist/lib/*.js",
-      types: "./dist/lib/*.d.ts",
+      import: `./dist/lib/*${distJsExtension}`,
+      types: `./dist/lib/*${distTypesExtension}`,
     },
     "./styles/globals.css": "./src/styles/globals.css",
   };

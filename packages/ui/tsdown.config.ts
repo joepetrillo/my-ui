@@ -1,7 +1,10 @@
-import { defineConfig } from "tsup";
+import { defineConfig } from "tsdown";
 
 export default defineConfig({
   clean: true,
+  deps: {
+    neverBundle: ["@my-ui/ui", /^@my-ui\/ui\//u],
+  },
   dts: true,
   entry: [
     "src/index.ts",
@@ -11,7 +14,8 @@ export default defineConfig({
     "src/lib/*.ts",
     "src/base-ui/*.ts",
   ],
-  external: ["@my-ui/ui", /^@my-ui\/ui\//u],
   format: ["esm"],
+  platform: "browser",
   sourcemap: true,
+  target: false,
 });
