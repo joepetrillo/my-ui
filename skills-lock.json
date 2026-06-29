@@ -11,7 +11,7 @@
       "source": "cosscom/coss",
       "sourceType": "github",
       "skillPath": "apps/ui/skills/coss/SKILL.md",
-      "computedHash": "b5e0fbcf1f17902ba34ccfe2b06ff1b6af07a37fb1c6c1424587a92630f39cd3"
+      "computedHash": "8d06783bce9259bff723026dc7791a7ea0717ba26732a42c229374bc71fdc1e1"
     },
     "coss-particles": {
       "source": "cosscom/coss",
@@ -29,7 +29,7 @@
       "source": "vercel/next.js",
       "sourceType": "github",
       "skillPath": "skills/next-cache-components-adoption/SKILL.md",
-      "computedHash": "a080096dcaf684bbcc81516892c204c4ec370e26b84c3e18f6200c785631bad0"
+      "computedHash": "aaee0946eff1ddcdeee10525953d32a11310e470ef4a13a2ebb3aa79bc1ae769"
     },
     "next-cache-components-optimizer": {
       "source": "vercel/next.js",
